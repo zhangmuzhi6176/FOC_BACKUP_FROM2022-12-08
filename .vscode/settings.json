@@ -1,0 +1,32 @@
+{
+    "files.associations": {
+        "zmz_system_hardware.h": "c",
+        "iic_soft.h": "c",
+        "mt6701.h": "c",
+        "iic_soft_hal.h": "c",
+        "iic_soft_drv_stm32f103.h": "c",
+        "stm32f1xx.h": "c",
+        "zmz_iic_soft_hal.h": "c",
+        "zmz_delay_drv_STM32F103.h": "c",
+        "zmz_uart_drv_STM32F103.h": "c",
+        "zmz_mt6701.h": "c",
+        "zmz_timer.h": "c",
+        "timer.h": "c",
+        "zmz_iic_soft_drv_stm32f103.h": "c",
+        "zmz_gpio_drv_stm32f103.h": "c",
+        "zmz_system.h": "c",
+        "zmz_timer_drv_stm32f103.h": "c",
+        "stm32f103xe.h": "c",
+        "zmz_led_drv_stm32f103.h": "c",
+        "zmz_can_drv_stm32f103.h": "c",
+        "stm32f1xx_hal.h": "c",
+        "stm32f1xx_hal_conf.h": "c",
+        "stm32f103xb.h": "c",
+        "zmz_uart_hal.h": "c",
+        "main.h": "c",
+        "gxht3x.h": "c",
+        "zmz_foc.h": "c",
+        "zmz_timer_hal.h": "c",
+        "zmz_adc_drv_stm32f103.h": "c"
+    }
+}

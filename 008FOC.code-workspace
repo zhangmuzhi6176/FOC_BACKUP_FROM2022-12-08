@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"zmz_system_hardware.h": "c",
+			"zmz_system.h": "c",
+			"zmz_timer_drv_stm32f103.h": "c",
+			"zmz_uart_hal.h": "c",
+			"zmz_delay_drv_stm32f103.h": "c",
+			"stm32f1xx.h": "c",
+			"zmz_adc_drv_stm32f103.h": "c",
+			"zmz_pid.h": "c",
+			"zmz_timer_hal.h": "c",
+			"zmz_iic_soft_hal.h": "c",
+			"zmz_delay.h": "c",
+			"zmz_as5600.h": "c",
+			"zmz_gpio_drv_stm32f103.h": "c"
+		}
+	}
+}
