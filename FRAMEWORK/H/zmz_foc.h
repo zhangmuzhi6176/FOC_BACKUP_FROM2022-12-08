@@ -14,6 +14,7 @@
 
 #define BLDC_ZERO_TORQUE TIMER_DUTY_MIN
 #define BLDC_MAX_TORQUE TIMER_DUTY_MAX
+#define FOC_PLOT_WIDTH 8
 
 typedef struct foc_current {
     double I_a;

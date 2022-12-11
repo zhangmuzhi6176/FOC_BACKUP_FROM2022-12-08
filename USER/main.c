@@ -242,6 +242,8 @@ int main(void)
         /* FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1, MT_Get_ANGLE(ENC_NO_1)); */
         /* RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, (fabs(100 - MT_Get_ANGLE(ENC_NO_2)/1.8)) / 100); */
 
+        /* printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2)/3.6); */
+
 
         /* SVPWM_Generate_Mech_Ang(FOC_I, MT_Get_ANGLE(ENC_NO_2), 50); */
 

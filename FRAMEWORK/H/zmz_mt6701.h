@@ -9,6 +9,8 @@
 #define MT_ANGLE_ADDR_H 0X03
 #define MT_ANGLE_ADDR_L 0X04
 
+#define MT_PRECISION_BITS 14
+
 typedef enum MT_Idx {
     ENC_NO_1 = 0,
     ENC_NO_2,

@@ -387,7 +387,7 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     _park_transform(elec_angle_deg_cur, &current);
 
     /* For debug only */
-    /* ZSS_FOC_LOGPLOT("%.3f, %.3f, %.3f\r\n", current.I_d * 40, current.I_q * 40, Q_ref * 40); */
+    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, current.I_d * 40, FOC_PLOT_WIDTH, current.I_q * 40, FOC_PLOT_WIDTH, Q_ref * 40); */
 
     current.I_d = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_D]), 0, current.I_d);
     current.I_q = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q);
@@ -396,6 +396,9 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     elec_angle_deg_next = _FOC_Elec_Angle_In_Range(index, (elec_angle_deg_cur + RAD_2_DEG(atan2(current.I_q, current.I_d))));
     svpwm_duty = sqrt(current.I_q * current.I_q + current.I_d * current.I_d) * BLDC_MAX_TORQUE;
     SVPWM_Generate_Elec_Ang(index, elec_angle_deg_next, svpwm_duty);
+
+    /* For debug only */
+    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, RAD_2_DEG(atan2(current.I_q, current.I_d)), FOC_PLOT_WIDTH, svpwm_duty); */
 
     RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, svpwm_duty / 100);
 }
@@ -420,6 +423,7 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double mech_angle
 
 
 /* 检查：配置IIC速度 */
+/* 根据没有plot的代码重新调参力矩环 */
 /* 重新调参速度环，速度环的最大速度需要控制较低 */
 /* 新增上电校准的功能，尽量将校准的角度控制在正负30度内，校准内容：
     //1.p：正反转最大力矩时生成角度与90度的比值

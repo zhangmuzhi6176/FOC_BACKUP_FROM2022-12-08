@@ -32,9 +32,8 @@ float MT_Get_ANGLE(u8 index)
     u8 buf[2];
     short raw;
     float angle;
-    buf[0] = MT_Read_Byte(index, MT_ANGLE_ADDR_H);
-    buf[1] = MT_Read_Byte(index, MT_ANGLE_ADDR_L);
+    MT_Read_Bytes(index, MT_ANGLE_ADDR_H, 2, buf);
     raw = ((u16)buf[0] << 6) | ((u16)buf[1] >> 2);
-    angle = (float)raw / (float)16384 * (float)360;
+    angle = (float)raw / (float)(1 << MT_PRECISION_BITS) * (float)RAD_2_DEG(2 * PI);
     return angle;
 }
