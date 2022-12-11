@@ -35,7 +35,7 @@ typedef struct foc_dev {
     PID_param_t foc_pid[FOC_PID_NUM];
 
     double mech_angle_last;
-    double last_time;
+    double time_last;
     double speed_deg_per_seconds_max;
 } foc_dev_t;
 
@@ -66,19 +66,13 @@ foc_dev_t foc_dev_g[] = {
             .D = 0,
             .error_accum_max = 5,
         },
-        .speed_deg_per_seconds_max = 1500,
+        .speed_deg_per_seconds_max = 1080,
         .foc_pid[FOC_PID_SPEED] = {
-            .P = 1.7,
-            .I = 0.12,
-            .D = 0,
-            .error_accum_max = 5,
-        },
-        .foc_pid[FOC_PID_POSITION] = {
-            .P = 2,
-            .I = 0,
-            .D = 0,
-            .error_accum_max = 5,
-        },
+            .P = 1.85,
+            .I = 0.25,
+            .D = 0.1,
+            .error_accum_max = 10,
+        }
     }
 };
 
@@ -403,31 +397,32 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, svpwm_duty / 100);
 }
 
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double mech_angle_deg_cur)
+void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
 {
-    double cur_time, speed_cur, speed_ratio_cur, speed_ratio_target = 0;
+    double time_cur, speed_cur, speed_ratio_cur, speed_ratio_target, mech_angle_deg_cur = 0;
 
-    cur_time = Timer_Get_System_Time_Second_Drv();
-    speed_cur = (_FOC_Value_Offset(mech_angle_deg_cur - foc_dev_g[index].mech_angle_last, RAD_2_DEG(PI/6), RAD_2_DEG(2 * PI))) / (cur_time - foc_dev_g[index].last_time);
-    speed_ratio_cur = _FOC_Value_Limit(speed_cur / foc_dev_g[index].speed_deg_per_seconds_max, 1, -1);
+    time_cur = Timer_Get_System_Time_Second_Drv();
+    mech_angle_deg_cur = _FOC_Get_Mech_angle(index);
+    speed_cur = (_FOC_Value_Offset(mech_angle_deg_cur - foc_dev_g[index].mech_angle_last, RAD_2_DEG(PI/6), RAD_2_DEG(2 * PI))) / (time_cur - foc_dev_g[index].time_last);
+    speed_ratio_cur = speed_cur / foc_dev_g[index].speed_deg_per_seconds_max;
 
     speed_ratio_target = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
 
-    FOC_Keep_Torque(index, -1 * speed_ratio_target);
+    FOC_Keep_Torque(index, speed_ratio_target);
 
     foc_dev_g[index].mech_angle_last = mech_angle_deg_cur;
-    foc_dev_g[index].last_time = cur_time;
+    foc_dev_g[index].time_last = time_cur;
 
-    ZSS_FOC_LOGPLOT("%.3f, %.3f, %.3f\r\n", speed_ratio_cur * 30, speed_ratio_ref * 30, speed_ratio_target * 30);
+    /* For debug only */
+    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, speed_ratio_cur * 30, FOC_PLOT_WIDTH, speed_ratio_ref * 30, FOC_PLOT_WIDTH, speed_ratio_target * 30); */
 }
 
 
-/* 检查：配置IIC速度 */
-/* 根据没有plot的代码重新调参力矩环 */
-/* 重新调参速度环，速度环的最大速度需要控制较低 */
+
 /* 新增上电校准的功能，尽量将校准的角度控制在正负30度内，校准内容：
-    //1.p：正反转最大力矩时生成角度与90度的比值
     2.三相电流最大值
  */
+/* 不知道在不同电压下PID的参数是否会有较大的差异，需确认，如果存在较大差异则选取电压区间进行调参，上电后通过“三相电流最大值”来
+匹配相应的电压区间，从而选取合适的PID参数 */
 /* adc hal */
-/* 速度环 */
+

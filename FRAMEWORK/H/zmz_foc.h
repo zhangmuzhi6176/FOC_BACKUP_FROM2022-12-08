@@ -81,6 +81,6 @@ void FOC_Init(void);
 /* param @ Q_ref: [-1, 1] */
 void FOC_Keep_Torque(foc_index_e index, double Q_ref);
 /* param @ speed_ratio: [-1, 1] */
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double mech_angle_deg_cur);
+void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref);
 
 #endif
