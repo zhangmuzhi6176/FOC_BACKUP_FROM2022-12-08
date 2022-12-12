@@ -365,7 +365,7 @@ void FOC_Init(void)
     }
 }
 
-void FOC_Keep_Torque(foc_index_e index, double Q_ref)
+void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
 {
     double elec_angle_deg_cur, elec_angle_deg_next, svpwm_duty = 0;
     foc_current_t current = {0};
@@ -389,7 +389,7 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     /* Reading fresh elec_angle here is recommended but not necessary */
     elec_angle_deg_next = _FOC_Elec_Angle_In_Range(index, (elec_angle_deg_cur + RAD_2_DEG(atan2(current.I_q, current.I_d))));
     svpwm_duty = sqrt(current.I_q * current.I_q + current.I_d * current.I_d) * BLDC_MAX_TORQUE;
-    SVPWM_Generate_Elec_Ang(index, elec_angle_deg_next, svpwm_duty);
+    SVPWM_Generate_Elec_Ang(index, elec_angle_deg_next, svpwm_duty * intensity);
 
     /* For debug only */
     /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, RAD_2_DEG(atan2(current.I_q, current.I_d)), FOC_PLOT_WIDTH, svpwm_duty); */
@@ -408,7 +408,7 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
 
     speed_ratio_target = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
 
-    FOC_Keep_Torque(index, speed_ratio_target);
+    FOC_Keep_Torque(index, speed_ratio_target, 1);
 
     foc_dev_g[index].mech_angle_last = mech_angle_deg_cur;
     foc_dev_g[index].time_last = time_cur;
