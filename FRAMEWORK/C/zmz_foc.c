@@ -53,25 +53,25 @@ foc_dev_t foc_dev_g[] = {
         .current_adc_offset[PHASE_C] = (4 - ADC_14_BIT_MID_VAL),
         .current_adc_idx = ADC_I,
         .current_last = {0, 0, 0},
-        .current_max = {640, 790, 790},
+        .current_max = {1080, 1300, 1300},
         .foc_pid[FOC_PID_Q] = {
             .P = 1,
-            .I = 0.15,
+            .I = 0.11,
             .D = 0,
-            .error_accum_max = 5,
+            .error_accum_max = 8,
         },
         .foc_pid[FOC_PID_D] = {
             .P = 1,
-            .I = 0.15,
+            .I = 0.11,
             .D = 0,
-            .error_accum_max = 5,
+            .error_accum_max = 8,
         },
-        .speed_deg_per_seconds_max = 1080,
+        .speed_deg_per_seconds_max = 2160,
         .foc_pid[FOC_PID_SPEED] = {
-            .P = 1.85,
-            .I = 0.25,
-            .D = 0.1,
-            .error_accum_max = 10,
+            .P = 1.2,
+            .I = 0.08,
+            .D = 0.5,
+            .error_accum_max = 5,
         }
     }
 };
@@ -105,14 +105,25 @@ __attribute__((unused)) static double _FOC_Value_Limit(double val, double limit_
     return val;
 }
 
-__attribute__((unused)) static double _FOC_Value_Offset(double val, double thresh, double offset)
+__attribute__((unused)) static double _FOC_Angle_Diff_Abs(double angle_1, double angle_2, double full_angle)
 {
-    if (val >= thresh) {
-        return (val - offset);
-    } else if (val <= thresh * (-1)) {
-        return (val + offset);
+    double angle_diff = fabs(angle_1 - angle_2);
+    if (angle_diff >= (full_angle / 2)) {
+        return (full_angle - angle_diff);
+    } else {
+        return angle_diff;
     }
-    return val;
+}
+
+__attribute__((unused)) static double _FOC_Angle_Diff_Sign(double angle_1, double angle_2, double full_angle)
+{
+    double angle_diff = angle_1 - angle_2;
+    if (angle_diff >= (full_angle / 2)) {
+        return (angle_diff - full_angle);
+    } else if (angle_diff <= (full_angle / (-2))) {
+        return (angle_diff + full_angle);
+    }
+    return angle_diff;
 }
 
 __attribute__((unused)) static double _FOC_Mech_Angle_In_Range(double mech_angle_deg)
@@ -403,7 +414,7 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
 
     time_cur = Timer_Get_System_Time_Second_Drv();
     mech_angle_deg_cur = _FOC_Get_Mech_angle(index);
-    speed_cur = (_FOC_Value_Offset(mech_angle_deg_cur - foc_dev_g[index].mech_angle_last, RAD_2_DEG(PI/6), RAD_2_DEG(2 * PI))) / (time_cur - foc_dev_g[index].time_last);
+    speed_cur = _FOC_Angle_Diff_Sign(mech_angle_deg_cur, foc_dev_g[index].mech_angle_last, RAD_2_DEG(2 * PI)) / (time_cur - foc_dev_g[index].time_last);
     speed_ratio_cur = speed_cur / foc_dev_g[index].speed_deg_per_seconds_max;
 
     speed_ratio_target = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
