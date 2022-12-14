@@ -27,10 +27,10 @@ typedef struct foc_dev {
     double cali_Magfield_2_Enc_angle_offset;
 
     u8 current_adc_chnl[PHASE_NUM];
-    short current_adc_offset[PHASE_NUM];
+    short current_adc_offset[PHASE_NUM];        /* Calibration required */
     u8 current_adc_idx;
     double current_last[PHASE_NUM];
-    double current_max[PHASE_NUM];
+    double current_max[PHASE_NUM];              /* Calibration required */
 
     PID_param_t foc_pid[FOC_PID_NUM];
 
@@ -48,30 +48,36 @@ foc_dev_t foc_dev_g[] = {
         .current_adc_chnl[PHASE_A] = 3,
         .current_adc_chnl[PHASE_B] = 1,
         .current_adc_chnl[PHASE_C] = 2,
-        .current_adc_offset[PHASE_A] = (307 - ADC_14_BIT_MID_VAL),
-        .current_adc_offset[PHASE_B] = (4 - ADC_14_BIT_MID_VAL),
-        .current_adc_offset[PHASE_C] = (4 - ADC_14_BIT_MID_VAL),
+        .current_adc_offset[PHASE_A] = (286 - ADC_14_BIT_MID_VAL),
+        .current_adc_offset[PHASE_B] = (-12 - ADC_14_BIT_MID_VAL),
+        .current_adc_offset[PHASE_C] = (49 - ADC_14_BIT_MID_VAL),
         .current_adc_idx = ADC_I,
         .current_last = {0, 0, 0},
-        .current_max = {1080, 1300, 1300},
+        .current_max = {1200, 1450, 1450},
         .foc_pid[FOC_PID_Q] = {
-            .P = 1,
-            .I = 0.11,
+            .P = 0.9,
+            .I = 0.1,
             .D = 0,
             .error_accum_max = 8,
         },
         .foc_pid[FOC_PID_D] = {
-            .P = 1,
-            .I = 0.11,
+            .P = 0.9,
+            .I = 0.1,
             .D = 0,
             .error_accum_max = 8,
         },
         .speed_deg_per_seconds_max = 2160,
         .foc_pid[FOC_PID_SPEED] = {
-            .P = 1.2,
-            .I = 0.08,
-            .D = 0.5,
-            .error_accum_max = 5,
+            .P = 1.15,
+            .I = 0.12,
+            .D = 0.3,
+            .error_accum_max = 3,
+        },
+        .foc_pid[FOC_PID_POSITION] = {
+            .P = 1.15,
+            .I = 0.12,
+            .D = 0.3,
+            .error_accum_max = 3,
         }
     }
 };
@@ -341,8 +347,8 @@ void FOC_Print_Current(foc_index_e index)
 
         ZSS_FOC_LOGD("FOC_PRT_CUR", "A[%-*.3f], B[%-*.3f], C[%-*.3f]\r\n",
                      PRINT_WIDTH, current[PHASE_A], PRINT_WIDTH, current[PHASE_B], PRINT_WIDTH, current[PHASE_C]);
-        /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n",
-               PRINT_WIDTH, current[PHASE_A] / 30, PRINT_WIDTH, current[PHASE_B] / 30, PRINT_WIDTH, current[PHASE_C] / 30); */
+        ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n",
+               PRINT_WIDTH, current[PHASE_A] / 30, PRINT_WIDTH, current[PHASE_B] / 30, PRINT_WIDTH, current[PHASE_C] / 30);
     }
 
     Timer_Set_Duty_Hal(foc_dev_g[index].bldc_tim_idx[PHASE_A], BLDC_ZERO_TORQUE);
@@ -398,7 +404,7 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
     current.I_q = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q);
 
     /* Reading fresh elec_angle here is recommended but not necessary */
-    elec_angle_deg_next = _FOC_Elec_Angle_In_Range(index, (elec_angle_deg_cur + RAD_2_DEG(atan2(current.I_q, current.I_d))));
+    elec_angle_deg_next = _FOC_Elec_Angle_In_Range(index, (_FOC_Get_Elec_angle(index) + RAD_2_DEG(atan2(current.I_q, current.I_d))));
     svpwm_duty = sqrt(current.I_q * current.I_q + current.I_d * current.I_d) * BLDC_MAX_TORQUE;
     SVPWM_Generate_Elec_Ang(index, elec_angle_deg_next, svpwm_duty * intensity);
 
@@ -408,7 +414,7 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
     RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, svpwm_duty / 100);
 }
 
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
+void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double intensity)
 {
     double time_cur, speed_cur, speed_ratio_cur, speed_ratio_target, mech_angle_deg_cur = 0;
 
@@ -419,7 +425,9 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
 
     speed_ratio_target = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
 
-    FOC_Keep_Torque(index, speed_ratio_target, 1);
+    /* speed_ratio_target = _FOC_Value_Limit(speed_ratio_target, 1, -1); */
+
+    FOC_Keep_Torque(index, speed_ratio_target, fabs(speed_ratio_target) * intensity);
 
     foc_dev_g[index].mech_angle_last = mech_angle_deg_cur;
     foc_dev_g[index].time_last = time_cur;
@@ -428,7 +436,12 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
     /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, speed_ratio_cur * 30, FOC_PLOT_WIDTH, speed_ratio_ref * 30, FOC_PLOT_WIDTH, speed_ratio_target * 30); */
 }
 
-
+void FOC_Go_Mech(foc_index_e index, double delta_mech_angle_deg)
+{
+    FOC_Keep_Speed(index, 0, 0);
+    /* For debug only */
+    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, speed_ratio_cur * 30, FOC_PLOT_WIDTH, speed_ratio_ref * 30, FOC_PLOT_WIDTH, speed_ratio_target * 30); */
+}
 
 /* 新增上电校准的功能，尽量将校准的角度控制在正负30度内，校准内容：
     2.三相电流最大值
