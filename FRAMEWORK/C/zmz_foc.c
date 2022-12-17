@@ -37,6 +37,8 @@ typedef struct foc_dev {
     double mech_angle_last;
     double time_last;
     double speed_deg_per_seconds_max;
+
+    double position_torq_factor;
 } foc_dev_t;
 
 foc_dev_t foc_dev_g[] = {
@@ -74,11 +76,12 @@ foc_dev_t foc_dev_g[] = {
             .error_accum_max = 3,
         },
         .foc_pid[FOC_PID_POSITION] = {
-            .P = 1.15,
-            .I = 0.12,
-            .D = 0.3,
-            .error_accum_max = 3,
-        }
+            .P = 0.5,
+            .I = 0,
+            .D = 0.5,
+            .error_accum_max = 0,
+        },
+        .position_torq_factor = 20,
     }
 };
 
@@ -400,8 +403,8 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
     /* For debug only */
     /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, current.I_d * 40, FOC_PLOT_WIDTH, current.I_q * 40, FOC_PLOT_WIDTH, Q_ref * 40); */
 
-    current.I_d = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_D]), 0, current.I_d);
-    current.I_q = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q);
+    current.I_d = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_D]), 0, current.I_d);
+    current.I_q = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q);
 
     /* Reading fresh elec_angle here is recommended but not necessary */
     elec_angle_deg_next = _FOC_Elec_Angle_In_Range(index, (_FOC_Get_Elec_angle(index) + RAD_2_DEG(atan2(current.I_q, current.I_d))));
@@ -416,37 +419,50 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
 
 void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double intensity)
 {
-    double time_cur, speed_cur, speed_ratio_cur, speed_ratio_target, mech_angle_deg_cur = 0;
+    double time_cur, speed_cur, speed_ratio_cur, speed_ratio_next, mech_angle_deg_cur = 0;
 
     time_cur = Timer_Get_System_Time_Second_Drv();
     mech_angle_deg_cur = _FOC_Get_Mech_angle(index);
     speed_cur = _FOC_Angle_Diff_Sign(mech_angle_deg_cur, foc_dev_g[index].mech_angle_last, RAD_2_DEG(2 * PI)) / (time_cur - foc_dev_g[index].time_last);
     speed_ratio_cur = speed_cur / foc_dev_g[index].speed_deg_per_seconds_max;
 
-    speed_ratio_target = PID_calc(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
+    speed_ratio_next = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
 
-    /* speed_ratio_target = _FOC_Value_Limit(speed_ratio_target, 1, -1); */
+    /* speed_ratio_next = _FOC_Value_Limit(speed_ratio_next, 1, -1); */
 
-    FOC_Keep_Torque(index, speed_ratio_target, fabs(speed_ratio_target) * intensity);
+    FOC_Keep_Torque(index, speed_ratio_next, fabs(speed_ratio_next) * intensity);
 
     foc_dev_g[index].mech_angle_last = mech_angle_deg_cur;
     foc_dev_g[index].time_last = time_cur;
 
     /* For debug only */
-    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, speed_ratio_cur * 30, FOC_PLOT_WIDTH, speed_ratio_ref * 30, FOC_PLOT_WIDTH, speed_ratio_target * 30); */
+    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, speed_ratio_cur * 30, FOC_PLOT_WIDTH, speed_ratio_ref * 30, FOC_PLOT_WIDTH, speed_ratio_next * 30); */
 }
 
-void FOC_Go_Mech(foc_index_e index, double delta_mech_angle_deg)
+void FOC_Keep_Position(foc_index_e index, double mech_angle_deg_ref, double intensity)
 {
-    FOC_Keep_Speed(index, 0, 0);
+    double mech_angle_deg_cur, mech_angle_deg_delta, mech_angle_deg_next, torq_ratio_next = 0;
+
+    mech_angle_deg_cur = _FOC_Get_Mech_angle(index);
+    mech_angle_deg_delta = _FOC_Angle_Diff_Sign(mech_angle_deg_cur, mech_angle_deg_ref, RAD_2_DEG(2 * PI));
+    mech_angle_deg_next = PID_calc_II(&(foc_dev_g[index].foc_pid[FOC_PID_POSITION]), 0, mech_angle_deg_delta);
+    torq_ratio_next = mech_angle_deg_next / foc_dev_g[index].position_torq_factor;
+
+    FOC_Keep_Torque(index, torq_ratio_next, intensity);
+
     /* For debug only */
-    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, speed_ratio_cur * 30, FOC_PLOT_WIDTH, speed_ratio_ref * 30, FOC_PLOT_WIDTH, speed_ratio_target * 30); */
+    ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, mech_angle_deg_ref, FOC_PLOT_WIDTH, mech_angle_deg_cur, FOC_PLOT_WIDTH, mech_angle_deg_next);
 }
 
-/* 新增上电校准的功能，尽量将校准的角度控制在正负30度内，校准内容：
-    2.三相电流最大值
- */
-/* 不知道在不同电压下PID的参数是否会有较大的差异，需确认，如果存在较大差异则选取电压区间进行调参，上电后通过“三相电流最大值”来
-匹配相应的电压区间，从而选取合适的PID参数 */
-/* adc hal */
+void FOC_Go_Mech(foc_index_e index, double delta_mech_angle_deg, double speed_level, double intensity)
+{}
 
+
+
+/* 
+
+位置环调参
+    position_torq_factor也许可以去掉
+    基本调参思路是：适当P，大D，零I
+
+ */

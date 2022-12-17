@@ -22,6 +22,7 @@ typedef struct PID_param {
 
 PID_param_t *PID_Init_Param(double P, double I, double D);
 void PID_Init(PID_param_t *pid);
-double PID_calc(PID_param_t *param, double ref_val, double cur_val);
+double PID_calc_I(PID_param_t *param, double ref_val, double cur_val);
+double PID_calc_II(PID_param_t *param, double ref_val, double cur_val);
 
 #endif
