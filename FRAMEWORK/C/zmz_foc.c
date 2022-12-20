@@ -1,4 +1,5 @@
 #include "zmz_foc.h"
+#include "zmz_filter.h"
 #include "zmz_led.h"
 #include "zmz_pid.h"
 #include "zmz_mt6701.h"
@@ -173,20 +174,6 @@ __attribute__((unused)) static void _reverse_park_transform(double elec_angle_de
 {
     current->I_alpha = current->I_d * cos(DEG_2_RAD(elec_angle_deg)) - current->I_q * sin(DEG_2_RAD(elec_angle_deg));
     current->I_beta = current->I_d * sin(DEG_2_RAD(elec_angle_deg)) + current->I_q * cos(DEG_2_RAD(elec_angle_deg));
-}
-
-__attribute__((unused)) static double _LP_Filter(double current_in, double *last_in, double alpha)
-{
-    double ret = 0;
-
-    if (!*last_in) {
-        *last_in = current_in;
-        return current_in;
-    }
-    ret = *last_in + alpha * (current_in - *last_in);
-    *last_in = ret;
-
-    return ret;
 }
 
 __attribute__((unused)) static void _FOC_Set_Offset_angle(foc_index_e index)
@@ -385,6 +372,14 @@ void FOC_Init(void)
     }
 }
 
+static filter_1st_lp_t filter_1 = {
+    .alpha = 0.1,
+};
+
+static filter_1st_lp_t filter_2 = {
+    .alpha = 0.1,
+};
+
 void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
 {
     double elec_angle_deg_cur, elec_angle_deg_next, svpwm_duty = 0;
@@ -400,19 +395,31 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity)
     elec_angle_deg_cur = _FOC_Get_Elec_angle(index);
     _park_transform(elec_angle_deg_cur, &current);
 
-    /* For debug only */
-    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, current.I_d * 40, FOC_PLOT_WIDTH, current.I_q * 40, FOC_PLOT_WIDTH, Q_ref * 40); */
+    /* current.I_d = Filter_1st_LP(&filter_1, current.I_d);
+    current.I_q = Filter_1st_LP(&filter_2, current.I_q); */
 
-    current.I_d = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_D]), 0, current.I_d);
-    current.I_q = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q);
+    /* For debug only */
+    ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, current.I_d * 40, FOC_PLOT_WIDTH, current.I_q * 40, FOC_PLOT_WIDTH, Q_ref * 40);
+
+    /* current.I_d = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_D]), 0, current.I_d);
+    current.I_q = PID_calc_I(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q); */
+
+
+    current.I_d = 0;
+    current.I_q = Q_ref;
+
 
     /* Reading fresh elec_angle here is recommended but not necessary */
     elec_angle_deg_next = _FOC_Elec_Angle_In_Range(index, (_FOC_Get_Elec_angle(index) + RAD_2_DEG(atan2(current.I_q, current.I_d))));
     svpwm_duty = sqrt(current.I_q * current.I_q + current.I_d * current.I_d) * BLDC_MAX_TORQUE;
-    SVPWM_Generate_Elec_Ang(index, elec_angle_deg_next, svpwm_duty * intensity);
 
+    /* svpwm_duty = Filter_1st_LP(&filter, svpwm_duty); */
+    /* printf("%.3f, %.3f\r\n", Q_ref * 30, Filter_1st_LP(&filter, Q_ref) * 30); */
+
+    SVPWM_Generate_Elec_Ang(index, elec_angle_deg_next, svpwm_duty * intensity);
+        
     /* For debug only */
-    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, RAD_2_DEG(atan2(current.I_q, current.I_d)), FOC_PLOT_WIDTH, svpwm_duty); */
+    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, RAD_2_DEG(atan2(current.I_q, current.I_d)), FOC_PLOT_WIDTH, svpwm_duty * intensity); */
 
     RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, svpwm_duty / 100);
 }

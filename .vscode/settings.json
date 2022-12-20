@@ -28,6 +28,7 @@
         "zmz_foc.h": "c",
         "zmz_timer_hal.h": "c",
         "zmz_adc_drv_stm32f103.h": "c",
-        "zmz_pid.h": "c"
+        "zmz_pid.h": "c",
+        "zmz_filter.h": "c"
     }
 }

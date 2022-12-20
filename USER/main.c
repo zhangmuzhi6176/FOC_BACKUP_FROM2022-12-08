@@ -238,9 +238,11 @@ int main(void)
     /* vTaskStartScheduler(); */
 
     while (1) {
-        /* FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1, 1); */
+        FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1, 1);
         /* FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1, 0.2); */
-        FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
+        /* FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1); */
+
+        /* delay_ms(50); */
 
 
         /* RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, (fabs(100 - MT_Get_ANGLE(ENC_NO_2)/1.8)) / 100); */
