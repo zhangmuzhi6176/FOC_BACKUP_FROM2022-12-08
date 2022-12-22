@@ -12,6 +12,8 @@
 #define ZSS_FOC_LOGF(format, ...) ZSS_LOGF("FOC", format, ##__VA_ARGS__)
 #define ZSS_FOC_LOGPLOT ZSS_LOGPLOT
 
+#define ZSS_FOC_LOGPLOT_TRIPPLE(a, b, c, mag) {ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, a * mag, FOC_PLOT_WIDTH, b * mag, FOC_PLOT_WIDTH, c * mag);}
+
 #define BLDC_ZERO_TORQUE TIMER_DUTY_MIN
 #define BLDC_MAX_TORQUE TIMER_DUTY_MAX
 #define FOC_PLOT_WIDTH 8
@@ -37,6 +39,13 @@ typedef enum foc_pid {
     FOC_PID_POSITION,
     FOC_PID_NUM
 } foc_pid_e;
+
+typedef enum foc_filter_bind {
+    FOC_FILTER_BIND_TORQ = 0,
+    FOC_FILTER_BIND_SPEED,
+    FOC_FILTER_BIND_POSITION,
+    FOC_FILTER_BIND_NUM
+} foc_filter_bind_e;
 
 typedef enum bldc_phase {
     PHASE_A = 0,
@@ -81,21 +90,20 @@ void FOC_Init(void);
 
 /* 
     param @ Q_ref: [-1, 1]
-    param @ intensity: [0, 1]
  */
-void FOC_Keep_Torque(foc_index_e index, double Q_ref, double intensity);
+void FOC_Keep_Torque(foc_index_e index, double Q_ref);
 
 /* 
-    param @ speed_ratio: [-1, 1]
-    param @ intensity: [0, 1]
+    param @ speed_ratio: [-1, 1], ideal range [0.1, 1]|[-0.1, -1]
+    param @ torq: [0, 1]
  */
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double intensity);
+void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double torq);
 
 /* 
     param @ ref_mech_angle_deg: [0, 360)
-    param @ intensity: [0, 1]
+    param @ torq: [0, 1]
  */
-void FOC_Keep_Position(foc_index_e index, double ref_mech_angle_deg, double intensity);
+void FOC_Keep_Position(foc_index_e index, double ref_mech_angle_deg, double torq);
 
 /* 
     param @ delta_mech_angle_deg: target delta mech angle in degree, i.e. 180, 540, -540

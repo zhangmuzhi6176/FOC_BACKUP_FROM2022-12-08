@@ -22,7 +22,16 @@ typedef struct filter_1st_lp {
     double alpha;
 } filter_1st_lp_t;
 
+typedef struct filter_bind {
+    double trend_val_max;
+    double start_bind_ratio;
+    double end_bind_ratio;
+    double (*head_val_generator)(double, double);
+    double (*tail_val_generator)(double, double);
+} filter_bind_t;
+
 double Filter_Moving_Average(filter_moving_average_t *filter, double val);
 double Filter_1st_LP(filter_1st_lp_t *filter, double val);
+double Filter_Bind(filter_bind_t bind_param, double val_head, double val_tail, double val_trend);
 
 #endif
