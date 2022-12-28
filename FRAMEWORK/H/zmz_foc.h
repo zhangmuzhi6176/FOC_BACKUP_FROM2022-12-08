@@ -33,8 +33,10 @@ typedef enum foc_index {
 } foc_index_e;
 
 typedef enum foc_pid {
-    FOC_PID_Q = 0,
-    FOC_PID_D,
+    FOC_PID_Q_L = 0,
+    FOC_PID_D_L,
+    FOC_PID_Q_H,
+    FOC_PID_D_H,
     FOC_PID_SPEED,
     FOC_PID_POSITION,
     FOC_PID_NUM
