@@ -29,23 +29,7 @@ double PID_calc_Pos(PID_param_t *param, double ref_val, double cur_val)
     double rlt, error = 0;
     error = ref_val - cur_val;
 
-    rlt = cur_val + (param->P * error) + (param->I * param->error_accum) + (param->D * (error - param->last_error));
-    param->last_error = error;
-
-    if ((fabs(param->error_accum + error) < param->error_accum_max) && (fabs(error) >= param->error_accum_threshold)) {
-        param->error_accum += error;
-    }
-
-    return rlt;
-}
-
-/* 需要修改，这还不是真正的增量式 */
-double PID_calc_Inc(PID_param_t *param, double ref_val, double cur_val)
-{
-    double rlt, error = 0;
-    error = ref_val - cur_val;
-
-    rlt = param->P * error + param->I * param->error_accum + param->D * (error - param->last_error);
+    rlt = (param->P * error) + (param->I * param->error_accum) + (param->D * (error - param->last_error));
     param->last_error = error;
 
     if (fabs(param->error_accum + error) < param->error_accum_max) {

@@ -16,7 +16,6 @@ typedef struct PID_param {
     double D;
     double error_accum;
     double error_accum_max;
-    double error_accum_threshold;
     double last_error;
     double last_result;
 } PID_param_t;
@@ -24,6 +23,5 @@ typedef struct PID_param {
 PID_param_t *PID_Init_Param(double P, double I, double D);
 void PID_Init(PID_param_t *pid);
 double PID_calc_Pos(PID_param_t *param, double ref_val, double cur_val);
-double PID_calc_Inc(PID_param_t *param, double ref_val, double cur_val);
 
 #endif

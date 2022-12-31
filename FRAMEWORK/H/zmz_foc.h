@@ -97,9 +97,8 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref);
 
 /* 
     param @ speed_ratio: [-1, 1], ideal range [0.1, 1]|[-0.1, -1]
-    param @ torq: [0, 1]
  */
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref, double torq);
+void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref);
 
 /* 
     param @ ref_mech_angle_deg: [0, 360)
