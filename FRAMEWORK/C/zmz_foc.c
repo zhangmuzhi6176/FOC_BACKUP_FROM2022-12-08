@@ -28,19 +28,21 @@ typedef struct foc_dev {
     double cali_Magfield_2_Enc_angle_offset;
 
     u8 current_adc_chnl[PHASE_NUM];
-    short current_adc_offset[PHASE_NUM];        /* Calibration required */
+    short current_adc_offset[PHASE_NUM]; /* Calibration required */
     u8 current_adc_idx;
     double current_last[PHASE_NUM];
-    double current_max[PHASE_NUM];              /* Calibration required */
+    double current_max[PHASE_NUM]; /* Calibration required */
 
     PID_param_t foc_pid[FOC_PID_NUM];
     filter_bind_t filter_bind_param[FOC_FILTER_BIND_NUM];
+
+    double Q_ref_cut;
 
     double mech_angle_last;
     double time_last;
     double speed_deg_per_seconds_max;
 
-    double position_torq_factor;
+    double near_torq;
 } foc_dev_t;
 
 static double _FOC_Torq_Bind_Simple_Liner_Generator_Head(double trend_bind_ratio, double val);
@@ -62,33 +64,22 @@ foc_dev_t foc_dev_g[] = {
         .current_adc_idx = ADC_I,
         .current_last = {0, 0, 0},
         .current_max = {1150, 1400, 1400},
-        .foc_pid[FOC_PID_Q_L] = {
-            .P = 0.9,
-            .I = 0,
-            .D = 0,
-            .error_accum_max = 0,
-        },
-        .foc_pid[FOC_PID_D_L] = {
-            .P = 0.9,
-            .I = 0,
-            .D = 0,
-            .error_accum_max = 0,
-        },
-        .foc_pid[FOC_PID_Q_H] = {
+        .foc_pid[FOC_PID_Q] = {
             .P = 0.9,
             .I = 0.11,
             .D = 0,
             .error_accum_max = 3,
         },
-        .foc_pid[FOC_PID_D_H] = {
+        .foc_pid[FOC_PID_D] = {
             .P = 0.9,
             .I = 0.11,
             .D = 0,
             .error_accum_max = 3,
         },
+        .Q_ref_cut = 0.025,
         .filter_bind_param[FOC_FILTER_BIND_TORQ] = {
             .start_bind_ratio = 0,
-            .end_bind_ratio = 0.15,
+            .end_bind_ratio = 0.2,
             .trend_val_max = 1,
             .head_val_generator = _FOC_Torq_Bind_Simple_Liner_Generator_Head,
             .tail_val_generator = _FOC_Torq_Bind_Simple_Liner_Generator_Tail,
@@ -103,12 +94,19 @@ foc_dev_t foc_dev_g[] = {
         },
 
         .foc_pid[FOC_PID_POSITION] = {
-            .P = 0.1,
-            .I = 0,
-            .D = 0,
-            .error_accum_max = 5,
+            .P = 1,
+            .I = 0.1,
+            .D = 0.5,
+            .error_accum_max = 0.5,
         },
-        .position_torq_factor = 20,
+        .filter_bind_param[FOC_FILTER_BIND_POSITION] = {
+            .start_bind_ratio = 0,
+            .end_bind_ratio = 0.5,
+            .trend_val_max = 1,
+            /* .head_val_generator = _FOC_Torq_Bind_Simple_Liner_Generator_Head,
+            .tail_val_generator = _FOC_Torq_Bind_Simple_Liner_Generator_Tail, */
+        },
+        .near_torq = 0.45,
     }
 };
 
@@ -216,6 +214,19 @@ __attribute__((unused)) static void _FOC_Set_Offset_angle(foc_index_e index)
     }
     SVPWM_Generate_Mech_Ang(index, 0, BLDC_ZERO_TORQUE);
     foc_dev_g[index].cali_Magfield_2_Enc_angle_offset = angle_cali;
+}
+
+__attribute__((unused)) static double _FOC_Map_Value(double input, double start_val_before_map, double end_val_before_map, double start_val_after_map, double end_val_after_map)
+{
+    double range = fabs(start_val_before_map - end_val_before_map);
+    double diff = fabs(fabs(start_val_before_map - end_val_before_map) - fabs(start_val_after_map - end_val_after_map));
+    if (input <= end_val_before_map && input >= start_val_before_map) {
+        return (input * ((range - diff) / range) + diff);
+    } else if (input >= (-1 * end_val_before_map) && input < start_val_before_map) {
+        return (input * ((range - diff) / range) - diff);
+    } else {
+        return input;
+    }
 }
 
 __attribute__((unused)) static void _SVPWM_Calc_Stage(double t_first, double t_second, svpwm_stage_t *stage)
@@ -364,7 +375,7 @@ void FOC_Print_Current(foc_index_e index)
         ZSS_FOC_LOGD("FOC_PRT_CUR", "A[%-*.3f], B[%-*.3f], C[%-*.3f]\r\n",
                      PRINT_WIDTH, current[PHASE_A], PRINT_WIDTH, current[PHASE_B], PRINT_WIDTH, current[PHASE_C]);
         ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n",
-               PRINT_WIDTH, current[PHASE_A] / 30, PRINT_WIDTH, current[PHASE_B] / 30, PRINT_WIDTH, current[PHASE_C] / 30);
+                        PRINT_WIDTH, current[PHASE_A] / 30, PRINT_WIDTH, current[PHASE_B] / 30, PRINT_WIDTH, current[PHASE_C] / 30);
     }
 
     Timer_Set_Duty_Hal(foc_dev_g[index].bldc_tim_idx[PHASE_A], BLDC_ZERO_TORQUE);
@@ -389,7 +400,7 @@ void FOC_Init(void)
 {
     for (u32 i = 0; i < ZSS_ARRAY_SIZE(foc_dev_g); i++) {
         _FOC_Set_Offset_angle((foc_index_e)i);
-        for (u8 j = 0; j< ZSS_ARRAY_SIZE(foc_dev_g[i].foc_pid); j++) {
+        for (u8 j = 0; j < ZSS_ARRAY_SIZE(foc_dev_g[i].foc_pid); j++) {
             PID_Init(&(foc_dev_g[i].foc_pid[j]));
         }
         ZSS_FOC_LOGI("FOC [%d] is initialized, pole num: [%d], Mag_2_Enc offset: [%.3f], MAX_cur A[%.3f], B[%.3f], C[%.3f].\r\n",
@@ -427,11 +438,17 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     /* For debug only */
     /* ZSS_FOC_LOGPLOT_TRIPPLE(current.I_d, current.I_q, Q_ref, 100); */
 
-    I_d_next_l = current.I_d + PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_D_L]), 0, current.I_d);
-    I_q_next_l = current.I_q + PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_Q_L]), Q_ref, current.I_q);
+    Q_ref = _FOC_Map_Value(Q_ref,
+                           0,
+                           foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_TORQ].end_bind_ratio,
+                           foc_dev_g[index].Q_ref_cut,
+                           foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_TORQ].end_bind_ratio);
 
-    I_d_next_h = current.I_d + PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_D_H]), 0, current.I_d);
-    I_q_next_h = current.I_q + PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_Q_H]), Q_ref, current.I_q);
+    I_d_next_l = 0;
+    I_q_next_l = Q_ref;
+
+    I_d_next_h = current.I_d + PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_D]), 0, current.I_d);
+    I_q_next_h = current.I_q + PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_Q]), Q_ref, current.I_q);
 
     I_d_next = Filter_Bind(foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_TORQ], I_d_next_l, I_d_next_h, fabs(Q_ref));
     I_q_next = Filter_Bind(foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_TORQ], I_q_next_l, I_q_next_h, fabs(Q_ref));
@@ -465,33 +482,33 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
 
     /* For debug only */
     /* ZSS_FOC_LOGPLOT_TRIPPLE(speed_ratio_cur, speed_ratio_ref, speed_ratio_next, 40); */
-    ZSS_FOC_LOGPLOT_TRIPPLE(speed_ratio_cur, speed_ratio_ref, foc_dev_g[index].foc_pid[FOC_PID_SPEED].error_accum, 40);
 }
 
-void FOC_Keep_Position(foc_index_e index, double mech_angle_deg_ref, double torq)
+double mag = 1;
+void FOC_Keep_Position(foc_index_e index, double mech_angle_deg_ref, double intensity)
 {
-    double mech_angle_deg_cur, mech_angle_deg_delta, mech_angle_deg_next, torq_ratio_next = 0;
+    double mech_angle_deg_cur, mech_angle_deg_delta, mech_angle_deg_delta_ratio, torq_ratio_next = 0;
 
     mech_angle_deg_cur = _FOC_Get_Mech_angle(index);
     mech_angle_deg_delta = _FOC_Angle_Diff_Sign(mech_angle_deg_cur, mech_angle_deg_ref, RAD_2_DEG(2 * PI));
-    mech_angle_deg_next = PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_POSITION]), 0, mech_angle_deg_delta);
-    torq_ratio_next = mech_angle_deg_next / foc_dev_g[index].position_torq_factor;
+    mech_angle_deg_delta_ratio = mech_angle_deg_delta / 180;
+    torq_ratio_next = PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_POSITION]), 0, mech_angle_deg_delta_ratio);
 
-    FOC_Keep_Torque(index, torq_ratio_next * torq);
+    if (intensity > foc_dev_g[index].near_torq) {
+        intensity = Filter_Bind(foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_POSITION],
+                                foc_dev_g[index].near_torq,
+                                intensity,
+                                fabs(mech_angle_deg_delta_ratio));
+    }
+
+    FOC_Keep_Torque(index, torq_ratio_next * intensity);
 
     /* For debug only */
-    ZSS_FOC_LOGPLOT_TRIPPLE(mech_angle_deg_ref, mech_angle_deg_cur, mech_angle_deg_delta, 0.1);
+    /* ZSS_FOC_LOGPLOT_TRIPPLE(mech_angle_deg_ref, mech_angle_deg_cur, mech_angle_deg_delta, 1); */
+    ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f, %-*.3f, %-*.3f\r\n",
+                    FOC_PLOT_WIDTH, mech_angle_deg_ref * mag,
+                    FOC_PLOT_WIDTH, mech_angle_deg_cur * mag,
+                    FOC_PLOT_WIDTH, fabs(mech_angle_deg_delta_ratio) * mag,
+                    FOC_PLOT_WIDTH, intensity * mag,
+                    FOC_PLOT_WIDTH, (foc_dev_g[index].foc_pid[FOC_PID_POSITION].error_accum * foc_dev_g[index].foc_pid[FOC_PID_POSITION].I) * mag);
 }
-
-void FOC_Go_Mech(foc_index_e index, double delta_mech_angle_deg, double speed_level, double torq)
-{}
-
-
-
-/* 
-
-位置环调参
-    position_torq_factor也许可以去掉
-    基本调参思路是：适当P，大D，零I
-
- */

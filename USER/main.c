@@ -239,8 +239,8 @@ int main(void)
 
     while (1) {
         /* FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
-        FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1);
-        /* FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1); */
+        /* FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
+        FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
 
         /* delay_ms(50); */
 

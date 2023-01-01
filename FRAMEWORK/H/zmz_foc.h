@@ -33,10 +33,8 @@ typedef enum foc_index {
 } foc_index_e;
 
 typedef enum foc_pid {
-    FOC_PID_Q_L = 0,
-    FOC_PID_D_L,
-    FOC_PID_Q_H,
-    FOC_PID_D_H,
+    FOC_PID_Q = 0,
+    FOC_PID_D,
     FOC_PID_SPEED,
     FOC_PID_POSITION,
     FOC_PID_NUM
@@ -102,14 +100,8 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref);
 
 /* 
     param @ ref_mech_angle_deg: [0, 360)
-    param @ torq: [0, 1]
- */
-void FOC_Keep_Position(foc_index_e index, double ref_mech_angle_deg, double torq);
-
-/* 
-    param @ delta_mech_angle_deg: target delta mech angle in degree, i.e. 180, 540, -540
     param @ intensity: [0, 1]
  */
-void FOC_Go_Mech(foc_index_e index, double delta_mech_angle_deg, double speed_level, double intensity);
+void FOC_Keep_Position(foc_index_e index, double ref_mech_angle_deg, double intensity);
 
 #endif
