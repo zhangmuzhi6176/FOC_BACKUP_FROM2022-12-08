@@ -15,6 +15,13 @@
                FILE_NAME_LEN_MAX, NO_PATH_FILE_NAME, __LINE__, LEVEL_NAME_LEN_MAX, LOG_LEVEL, MODULE_NAME_LEN_MAX, MODULE, ##__VA_ARGS__); \
     }
 
+#define ZSS_ASSERT_WITH_LOG(format, ...)                                                                                               \
+    {                                                                                                                                  \
+        printf("FILE:%-*s  |  LINE:[%4d]  |  %-*s  |  %-*s  |  " format,                                                               \
+               FILE_NAME_LEN_MAX, NO_PATH_FILE_NAME, __LINE__, LEVEL_NAME_LEN_MAX, "F", MODULE_NAME_LEN_MAX, "ASSERT", ##__VA_ARGS__); \
+        while (1);                                                                                                                     \
+    }
+
 #define ZSS_LOGD(MODULE, KEY, format, ...)                                      \
     {                                                                           \
         if (Get_Uart_LOG_D_Status(UART_1) && Match_Uart_LOG_D_KEY(UART_1, KEY)) \

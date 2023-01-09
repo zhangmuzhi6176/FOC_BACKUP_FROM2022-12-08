@@ -16,6 +16,9 @@
 
 #define BLDC_ZERO_TORQUE TIMER_DUTY_MIN
 #define BLDC_MAX_TORQUE TIMER_DUTY_MAX
+
+#define BLDC_CURRENT_CALI_DIFF_THRESH 200
+
 #define FOC_PLOT_WIDTH 8
 
 typedef struct foc_current {
@@ -84,8 +87,9 @@ void SVPWM_Generate_Mech_Ang(foc_index_e index, double mech_angle_deg, double sv
 void SVPWM_Generate_Alpha_Beta(foc_index_e index, foc_current_t current);
 void SVPWM_Disable(foc_index_e index);
 void SVPWM_Enable(foc_index_e index);
+void FOC_Current_Plot(foc_index_e index);
 
-void FOC_Print_Current(foc_index_e index);
+void FOC_Current_Print(foc_index_e index);
 void FOC_Init(void);
 
 /* 

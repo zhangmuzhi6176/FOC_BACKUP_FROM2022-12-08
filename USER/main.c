@@ -239,14 +239,24 @@ int main(void)
 
     while (1) {
         /* FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
-        /* FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
-        FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
+        /* FOC_Keep_Torque(FOC_I, 0); */
 
-        /* delay_ms(50); */
+
+        /* FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
+        /* FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1); */
+
+        FOC_Current_Plot(FOC_I);
+
+        /* printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2)/3.6);
+        Timer_Set_Duty_Hal(0, MT_Get_ANGLE(ENC_NO_2)/3.6);
+        Timer_Set_Duty_Hal(1, MT_Get_ANGLE(ENC_NO_2)/3.6);
+        Timer_Set_Duty_Hal(2, MT_Get_ANGLE(ENC_NO_2)/3.6); */
+
+        delay_ms(5);
 
 
         /* RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, (fabs(100 - MT_Get_ANGLE(ENC_NO_2)/1.8)) / 100); */
-        /* printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2)/3.6); */
+        /* printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_1)/3.6); */
 
 
         /* SVPWM_Generate_Mech_Ang(FOC_I, MT_Get_ANGLE(ENC_NO_2), 50); */
