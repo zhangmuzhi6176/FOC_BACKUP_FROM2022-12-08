@@ -17,7 +17,7 @@
 #define BLDC_ZERO_TORQUE TIMER_DUTY_MIN
 #define BLDC_MAX_TORQUE TIMER_DUTY_MAX
 
-#define BLDC_CURRENT_CALI_DIFF_THRESH 200
+#define BLDC_CURRENT_CALI_DIFF_THRESH 300
 
 #define FOC_PLOT_WIDTH 8
 
@@ -72,6 +72,12 @@ typedef enum svpwm_phase {
     SVPWM_PHASE_VI,
     SVPWM_PHASE_NUM,
 } svpwm_phase_e;
+
+typedef enum bldc_direction {
+    BLDC_STOP = 0,
+    BLDC_CW, 
+    BLDC_CCW,
+} bldc_direction_e;
 
 static char *svpwm_phase_e2s[] = {
     [SVPWM_PHASE_I] = "SVPWM_PHASE_I",

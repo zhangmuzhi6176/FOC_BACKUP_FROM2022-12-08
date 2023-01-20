@@ -38,3 +38,8 @@ double PID_calc_Pos(PID_param_t *param, double ref_val, double cur_val)
 
     return rlt;
 }
+
+void PID_Flush_Error_Accum(PID_param_t *param)
+{
+    param->error_accum = 0;
+}

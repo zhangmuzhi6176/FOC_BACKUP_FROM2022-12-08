@@ -40,6 +40,8 @@ typedef enum rgb_led_color_spec {
 void RGB_Led_Set(rgb_led_index_e rgb_led_index, double r, double g, double b);
 /* param @ intensity: [0, 1] */
 void RGB_Led_Set_Color(rgb_led_index_e rgb_led_index, rgb_led_color_spec_e color, double intensity);
+void RGB_Led_Blink(rgb_led_index_e rgb_led_index, rgb_led_color_spec_e color, double intensity, double period_ms);
+void RGB_Led_Blink_Times(rgb_led_index_e rgb_led_index, rgb_led_color_spec_e color, double intensity, u8 Times);
 void RGB_Led_Init(void);
 
 #endif

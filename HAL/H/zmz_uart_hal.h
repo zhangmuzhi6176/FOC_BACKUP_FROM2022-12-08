@@ -1,5 +1,7 @@
 #ifndef _ZMZ_UART_HAL_H
 #define _ZMZ_UART_HAL_H
+#include "zmz_delay.h"
+#include "zmz_led.h"
 #include "zmz_uart_drv_STM32F103.h"
 #include "zmz_system_hardware.h"
 #include "string.h"
@@ -19,7 +21,10 @@
     {                                                                                                                                  \
         printf("FILE:%-*s  |  LINE:[%4d]  |  %-*s  |  %-*s  |  " format,                                                               \
                FILE_NAME_LEN_MAX, NO_PATH_FILE_NAME, __LINE__, LEVEL_NAME_LEN_MAX, "F", MODULE_NAME_LEN_MAX, "ASSERT", ##__VA_ARGS__); \
-        while (1);                                                                                                                     \
+        while (1)                                                                                                                      \
+        {                                                                                                                              \
+            RGB_Led_Blink(RGB_LED_I, RGB_LED_PURPLE, 1, 600);                                                                          \
+        }                                                                                                                              \
     }
 
 #define ZSS_LOGD(MODULE, KEY, format, ...)                                      \
