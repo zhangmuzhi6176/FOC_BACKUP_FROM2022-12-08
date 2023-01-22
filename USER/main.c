@@ -232,10 +232,17 @@ int main(void)
                 (TaskHandle_t *)&StartTask_Handler); //任务句柄
     /* vTaskStartScheduler(); */
 
+    /* double ang = 0; */
+
     while (1) {
-        FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1);
-        /* FOC_Keep_Speed(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
-        /* FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1); */
+        /* FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
+        /* FOC_Keep_Speed(FOC_I, ((MT_Get_ANGLE(ENC_NO_2) / 180) - 1) * 1440); */
+
+        FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
+
+        /* ang += 1;
+
+        if (ang >= 360) ang = 0; */
 
         /* FOC_Current_Plot(FOC_I); */
 

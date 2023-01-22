@@ -12,14 +12,14 @@
 #define ZSS_FOC_LOGF(format, ...) ZSS_LOGF("FOC", format, ##__VA_ARGS__)
 #define ZSS_FOC_LOGPLOT ZSS_LOGPLOT
 
-#define ZSS_FOC_LOGPLOT_TRIPPLE(a, b, c, mag) {ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f\r\n", FOC_PLOT_WIDTH, a * mag, FOC_PLOT_WIDTH, b * mag, FOC_PLOT_WIDTH, c * mag);}
+#define ZSS_FOC_LOGPLOT_TRIPPLE(a, b, c, mag) {ZSS_FOC_LOGPLOT("%-*.6f, %-*.6f, %-*.6f\r\n", FOC_PLOT_WIDTH, a * mag, FOC_PLOT_WIDTH, b * mag, FOC_PLOT_WIDTH, c * mag);}
 
 #define BLDC_ZERO_TORQUE TIMER_DUTY_MIN
 #define BLDC_MAX_TORQUE TIMER_DUTY_MAX
 
 #define BLDC_CURRENT_CALI_DIFF_THRESH 300
 
-#define FOC_PLOT_WIDTH 8
+#define FOC_PLOT_WIDTH 15
 
 typedef struct foc_current {
     double I_a;
@@ -104,9 +104,9 @@ void FOC_Init(void);
 void FOC_Keep_Torque(foc_index_e index, double Q_ref);
 
 /* 
-    param @ speed_ratio: [-1, 1], ideal range [0.1, 1]|[-0.1, -1]
+    param @ speed_ref: [-2160, 2160]
  */
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref);
+void FOC_Keep_Speed(foc_index_e index, double speed_ref);
 
 /* 
     param @ ref_mech_angle_deg: [0, 360)

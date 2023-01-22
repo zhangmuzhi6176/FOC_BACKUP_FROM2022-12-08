@@ -10,6 +10,8 @@
 #define ZSS_PID_LOGE(format, ...) ZSS_LOGE("PID", format, ##__VA_ARGS__)
 #define ZSS_PID_LOGF(format, ...) ZSS_LOGF("PID", format, ##__VA_ARGS__)
 
+#define ZSS_PID_ERROR_ACCUM_MAX 999999999
+
 typedef struct PID_param {
     double P;
     double I;

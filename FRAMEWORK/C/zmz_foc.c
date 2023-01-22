@@ -47,13 +47,12 @@ typedef struct foc_dev {
     double Torq_I_val_h;
 
     double time_last;
-    double speed_deg_per_seconds_max;
 
     double near_torq;
 } foc_dev_t;
 
-static double _FOC_Position_Bind_Simple_Liner_Generator_Head(double trend_bind_ratio, double val);
-static double _FOC_Position_Bind_Simple_Liner_Generator_Tail(double trend_bind_ratio, double val);
+static double _FOC_Torq_Bind_Simple_Liner_Generator_Head(double trend_bind_ratio, double val);
+static double _FOC_Torq_Bind_Simple_Liner_Generator_Tail(double trend_bind_ratio, double val);
 
 foc_dev_t foc_dev_g[] = {
     [FOC_I] = {
@@ -76,49 +75,48 @@ foc_dev_t foc_dev_g[] = {
         .current_max = {1350, 1500, 1500},      /* Default value in case no _FOC_Current_Cali */
         .current_min = {-1350, -1500, -1500},
 
-        .Q_offset = 0.153,
-        .Torq_I_val_l = 0.05,
-        .Torq_I_val_h = 0.25,
+        .Q_offset = 0.15,
+        .Torq_I_val_l = 0.04,
+        .Torq_I_val_h = 0.2,
         .foc_pid[FOC_PID_Q] = {
-            .P = 1.05,
+            .P = 1,
             .I = 0,
             .D = 0,
             .error_accum_max = 8,
         },
         .foc_pid[FOC_PID_D] = {
-            .P = 1.05,
+            .P = 1,
             .I = 0,
             .D = 0,
             .error_accum_max = 8,
         },
         .filter_bind_param[FOC_FILTER_BIND_TORQ] = {
-            .start_bind_ratio = 0.1,
+            .start_bind_ratio = 0.05,
             .end_bind_ratio = 1,
             .trend_val_max = 1,
+            .head_val_generator = _FOC_Torq_Bind_Simple_Liner_Generator_Head,
+            .tail_val_generator = _FOC_Torq_Bind_Simple_Liner_Generator_Tail,
         },
 
-        .speed_deg_per_seconds_max = 2160,
         .foc_pid[FOC_PID_SPEED] = {
-            .P = 0.2,
-            .I = 0.1,
+            .P = 0.0003,
+            .I = 0.0001,
             .D = 0,
-            .error_accum_max = 5,
+            .error_accum_max = 2500,
         },
 
         .foc_pid[FOC_PID_POSITION] = {
             .P = 1,
-            .I = 0,
-            .D = 0.1,
-            .error_accum_max = 0.5,
+            .I = 0.01,
+            .D = 0,
+            .error_accum_max = 5,
         },
         .filter_bind_param[FOC_FILTER_BIND_POSITION] = {
             .start_bind_ratio = 0,
             .end_bind_ratio = 0.5,
             .trend_val_max = 1,
-            .head_val_generator = _FOC_Position_Bind_Simple_Liner_Generator_Head,
-            .tail_val_generator = _FOC_Position_Bind_Simple_Liner_Generator_Tail,
         },
-        .near_torq = 0.45,
+        .near_torq = 0.55,
     }
 };
 
@@ -562,6 +560,16 @@ __attribute__((unused)) static bool _FOC_Check_Qref_sign_Changed(foc_index_e ind
     return ret;
 }
 
+static double _FOC_Torq_Bind_Simple_Liner_Generator_Head(double trend_bind_ratio, double val)
+{
+    return val * (1 - trend_bind_ratio);
+}
+
+static double _FOC_Torq_Bind_Simple_Liner_Generator_Tail(double trend_bind_ratio, double val)
+{
+    return val * trend_bind_ratio;
+}
+
 void FOC_Keep_Torque(foc_index_e index, double Q_ref)
 {
     double elec_angle_deg_cur, elec_angle_deg_next, svpwm_duty, I_d_next, I_q_next, Q_offset = 0;
@@ -582,13 +590,9 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     /* Reading fresh elec_angle here is necessary */
     elec_angle_deg_cur = _FOC_Get_Elec_angle(index);
     _park_transform(elec_angle_deg_cur, &current);
-    
-    foc_dev_g[index].mech_angle_last = foc_dev_g[index].mech_angle_current;
-    foc_dev_g[index].mech_angle_current = elec_angle_deg_cur / foc_dev_g[index].cali_pole_num;
-    foc_dev_g[index].mech_angle_delta = _FOC_Angle_Diff_Sign(foc_dev_g[index].mech_angle_current, foc_dev_g[index].mech_angle_last, RAD_2_DEG(2 * PI));
 
     /* For debug only */
-    ZSS_FOC_LOGPLOT_TRIPPLE(current.I_d, current.I_q, Q_ref, 100);
+    /* ZSS_FOC_LOGPLOT_TRIPPLE(current.I_d, current.I_q, Q_ref, 100); */
 
     foc_dev_g[index].foc_pid[FOC_PID_Q].I = Filter_Bind(foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_TORQ], foc_dev_g[index].Torq_I_val_l, foc_dev_g[index].Torq_I_val_h, fabs(Q_ref));
     foc_dev_g[index].foc_pid[FOC_PID_D].I = Filter_Bind(foc_dev_g[index].filter_bind_param[FOC_FILTER_BIND_TORQ], foc_dev_g[index].Torq_I_val_l, foc_dev_g[index].Torq_I_val_h, fabs(Q_ref));
@@ -613,40 +617,51 @@ void FOC_Keep_Torque(foc_index_e index, double Q_ref)
     RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, svpwm_duty / 100);
 }
 
-void FOC_Keep_Speed(foc_index_e index, double speed_ratio_ref)
+void FOC_Keep_Speed(foc_index_e index, double speed_ref)
 {
-    double time_cur, speed_cur, speed_ratio_cur, speed_ratio_next = 0;
+    double time_cur, speed_cur, torq_next = 0;
+    bldc_direction_e dir = BLDC_STOP;
+
+    if (speed_ref > 0) {
+        dir = BLDC_CW;
+    } else if (speed_ref < 0) {
+        dir = BLDC_CCW;
+    }
 
     time_cur = Timer_Get_System_Time_Second_Drv();
-    speed_cur = foc_dev_g[index].mech_angle_delta / (time_cur - foc_dev_g[index].time_last);
-    speed_ratio_cur = speed_cur / foc_dev_g[index].speed_deg_per_seconds_max;
-    speed_ratio_next = PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ratio_ref, speed_ratio_cur);
+    foc_dev_g[index].mech_angle_current = _FOC_Get_Mech_angle(index);
+    speed_cur = _FOC_Angle_Diff_Sign(foc_dev_g[index].mech_angle_current, foc_dev_g[index].mech_angle_last, RAD_2_DEG(2 * PI)) / (time_cur - foc_dev_g[index].time_last);
+    torq_next = PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_SPEED]), speed_ref, speed_cur);
 
-    speed_ratio_next = _FOC_Value_Limit(speed_ratio_next, 1, -1);
-    FOC_Keep_Torque(index, speed_ratio_next);
+    switch (dir) {
+        case BLDC_STOP:
+            FOC_Keep_Torque(index, BLDC_ZERO_TORQUE);
+            break;
+        case BLDC_CW:
+            torq_next = _FOC_Value_Limit(torq_next, 1, 0.0001);
+            break;
+        case BLDC_CCW:
+            torq_next = _FOC_Value_Limit(torq_next, -0.0001, -1);
+            break;
+        default:
+            ZSS_ASSERT_WITH_LOG("Invalid param dir[%d].\r\n", dir);
+    }
+    FOC_Keep_Torque(index, torq_next);
 
     foc_dev_g[index].time_last = time_cur;
+    foc_dev_g[index].mech_angle_last = foc_dev_g[index].mech_angle_current;
 
     /* For debug only */
-    ZSS_FOC_LOGPLOT_TRIPPLE(speed_ratio_cur, speed_ratio_ref, speed_ratio_next, 40);
+    /* ZSS_FOC_LOGPLOT_TRIPPLE(speed_cur, speed_ref, torq_next, 0.1); */
 }
 
-static double _FOC_Position_Bind_Simple_Liner_Generator_Head(double trend_bind_ratio, double val)
-{
-    return val * (1 - trend_bind_ratio);
-}
-
-static double _FOC_Position_Bind_Simple_Liner_Generator_Tail(double trend_bind_ratio, double val)
-{
-    return val * trend_bind_ratio;
-}
-
-double mag = 100;
 void FOC_Keep_Position(foc_index_e index, double mech_angle_deg_ref, double intensity)
 {
-    double mech_angle_deg_delta_ratio, torq_ratio_next = 0;
+    double mech_angle_deg_delta_ratio, mech_angle_current, torq_ratio_next, mech_angle_deg_delta = 0;
 
-    mech_angle_deg_delta_ratio = foc_dev_g[index].mech_angle_delta / 180;
+    mech_angle_current = _FOC_Get_Mech_angle(index);
+    mech_angle_deg_delta = _FOC_Angle_Diff_Sign(mech_angle_current, mech_angle_deg_ref, RAD_2_DEG(2 * PI));
+    mech_angle_deg_delta_ratio = mech_angle_deg_delta / RAD_2_DEG(PI);
     torq_ratio_next = PID_calc_Pos(&(foc_dev_g[index].foc_pid[FOC_PID_POSITION]), 0, mech_angle_deg_delta_ratio);
 
     /* if (intensity > foc_dev_g[index].near_torq) {
@@ -656,14 +671,9 @@ void FOC_Keep_Position(foc_index_e index, double mech_angle_deg_ref, double inte
                                 fabs(mech_angle_deg_delta_ratio));
     } */
 
+
     FOC_Keep_Torque(index, torq_ratio_next * intensity);
 
     /* For debug only */
-    ZSS_FOC_LOGPLOT_TRIPPLE(mech_angle_deg_ref, foc_dev_g[index].mech_angle_current, foc_dev_g[index].mech_angle_delta, 1);
-    /* ZSS_FOC_LOGPLOT("%-*.3f, %-*.3f, %-*.3f, %-*.3f, %-*.3f\r\n",
-                    FOC_PLOT_WIDTH, mech_angle_deg_ref * mag,
-                    FOC_PLOT_WIDTH, mech_angle_deg_cur * mag,
-                    FOC_PLOT_WIDTH, fabs(mech_angle_deg_delta_ratio) * mag,
-                    FOC_PLOT_WIDTH, intensity * mag,
-                    FOC_PLOT_WIDTH, (foc_dev_g[index].foc_pid[FOC_PID_POSITION].error_accum * foc_dev_g[index].foc_pid[FOC_PID_POSITION].I) * mag); */
+    ZSS_FOC_LOGPLOT_TRIPPLE(mech_angle_deg_ref, mech_angle_current, mech_angle_deg_delta, 0.1);
 }

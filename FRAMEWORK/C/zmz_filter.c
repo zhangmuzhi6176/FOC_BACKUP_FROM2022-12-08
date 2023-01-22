@@ -38,7 +38,7 @@ double Filter_1st_LP(filter_1st_lp_t *filter, double val)
 {
     double ret = 0;
 
-    ret = filter->val_last + filter->alpha * (val - filter->val_last);
+    ret = (filter->val_last * filter->alpha) + ((1 - filter->alpha) * val);
     filter->val_last = ret;
 
     return ret;
