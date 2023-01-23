@@ -1,13 +1,13 @@
 #include "zmz_iic_soft_drv_STM32F103.h"
 
-typedef struct iic {
+typedef struct iic_dev {
     gpio_spec_t sda_io;
     gpio_spec_t scl_io;
 
     u8 device_addr;
-} iic_t;
+} iic_dev_t;
 
-static iic_t iic_dev_g[] = {
+static iic_dev_t iic_dev_g[] = {
     [0] = {
         .sda_io = {
             .gpio_grp = B,

@@ -30,6 +30,9 @@
         "zmz_adc_drv_stm32f103.h": "c",
         "zmz_pid.h": "c",
         "zmz_filter.h": "c",
-        "zmz_led.h": "c"
+        "zmz_led.h": "c",
+        "foc_5225_conf.h": "c",
+        "foc_6025_conf.h": "c",
+        "zmz_delay.h": "c"
     }
 }

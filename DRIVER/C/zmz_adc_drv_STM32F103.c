@@ -8,7 +8,7 @@ typedef struct adc_channel {
     ADC_ChannelConfTypeDef channel_conf;
 } adc_channel_t;
 
-typedef struct adc {
+typedef struct adc_dev {
     adc_channel_t channels[ADC_PIN_NUM];
 
     RCC_PeriphCLKInitTypeDef adc_clk_select;
@@ -19,9 +19,9 @@ typedef struct adc {
     u8 adc_dma_buffer_depth;
 
     u8 adc_number;
-} adc_t;
+} adc_dev_t;
 
-static adc_t adc_dev_g[] = {
+static adc_dev_t adc_dev_g[] = {
     [ADC_I] = {
         .channels = {
             [ADC_PIN_I] = {

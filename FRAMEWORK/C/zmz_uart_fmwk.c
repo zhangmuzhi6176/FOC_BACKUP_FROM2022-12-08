@@ -1,4 +1,5 @@
 #include "zmz_foc.h"
+#include "zmz_timer_hal.h"
 #include "zmz_uart_fmwk.h"
 #include "zmz_uart_hal.h"
 #include "string.h"
@@ -34,7 +35,7 @@ void Uart_parse_one(u8 uart_index, const char *input)
         }
     } else if (!ZSS_STRNCMP("FOC", cmd)) {
         if (!ZSS_STRNCMP("PRT_CUR", value_c)) {
-            FOC_Current_Print(FOC_I);
+            FOC_Current_Print_A_Cycle(FOC_I);
         }
     } else if (!ZSS_STRNCMP("DBG_GET_INT", cmd)) {
         Clean_Uart_DBG_INT(uart_index);

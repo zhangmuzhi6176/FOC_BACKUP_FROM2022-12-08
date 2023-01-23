@@ -1,6 +1,38 @@
 #include "zmz_can_drv_STM32F103.h"
 #include "zmz_uart_hal.h"
 
+typedef struct can_dev {
+    u8 can_number;
+} can_dev_t;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 CAN_HandleTypeDef hcan;
 
 u8 Can_RxData[8];

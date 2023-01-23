@@ -240,6 +240,7 @@ int main(void)
 
         FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
 
+
         /* ang += 1;
 
         if (ang >= 360) ang = 0; */
@@ -252,7 +253,8 @@ int main(void)
         Timer_Set_Duty_Hal(2, MT_Get_ANGLE(ENC_NO_2)/3.6); */
 
 
-        /* delay_ms(5); */
+        /* printf("%-*.3f\r\n", 8, _FOC_Get_Mech_angle(FOC_I));
+        delay_ms(10); */
 
 
         /* RGB_Led_Set_Color(RGB_LED_I, RGB_LED_LAKE_BLUE, (fabs(100 - MT_Get_ANGLE(ENC_NO_2)/1.8)) / 100); */
