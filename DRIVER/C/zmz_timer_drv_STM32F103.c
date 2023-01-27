@@ -91,7 +91,7 @@ static timer_t timer_dev_g[] = {
         .timer_type = DELAY_TIMER,
         .enable_irq = true,
         .irq_no = TIM1_UP_IRQn,
-        .preempt_priority = 3,
+        .preempt_priority = 0,
         .sub_priority = 0,
     },
     [4] = {

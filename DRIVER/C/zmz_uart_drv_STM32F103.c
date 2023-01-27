@@ -29,7 +29,7 @@ typedef struct uart {
     UART_HandleTypeDef uart_handler;
     USART_TypeDef *instance;
 
-    u8 uart_index;
+    u8 uart_number;
     gpio_spec_t uart_tx_io;
     gpio_spec_t uart_rx_io;
     IRQn_Type irq_no;
@@ -58,7 +58,7 @@ typedef struct uart {
 static uart_t uart_dev_g[] = {
     [0] = {
         .instance = USART1,
-        .uart_index = 1,
+        .uart_number = 1,
         .uart_tx_io = {
             .gpio_grp = A,
             .gpio_num = 9,
@@ -68,7 +68,7 @@ static uart_t uart_dev_g[] = {
             .gpio_num = 10,
         },
         .irq_no = USART1_IRQn,
-        .preempt_priority = 0,
+        .preempt_priority = 2,
         .sub_priority = 0,
         .baud_rate = 921600,
         .word_length = UART_WORDLENGTH_8B,
@@ -101,7 +101,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     __HAL_RCC_AFIO_CLK_ENABLE();
     for (u32 i = 0; i < ZSS_ARRAY_SIZE(uart_dev_g); i++) {
         if (huart->Instance == uart_dev_g[i].instance) {
-            switch (uart_dev_g[i].uart_index) {
+            switch (uart_dev_g[i].uart_number) {
             case 1:
                 __HAL_RCC_USART1_CLK_ENABLE();
                 break;
@@ -112,6 +112,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
                 __HAL_RCC_USART3_CLK_ENABLE();
                 break;
             default:
+                /* No log befre UART is initialized. */
                 break;
             }
 

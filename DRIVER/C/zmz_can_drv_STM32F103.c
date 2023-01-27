@@ -1,34 +1,55 @@
-#include "zmz_can_drv_STM32F103.h"
 #include "zmz_uart_hal.h"
 
+#include "zmz_can_drv_STM32F103.h"
+#include "zmz_gpio_drv_STM32F103.h"
+
 typedef struct can_dev {
-    CAN_RxHeaderTypeDef CanRx;
-    CAN_TxHeaderTypeDef CanTx;
+    CAN_RxHeaderTypeDef RxHeader;
+    CAN_TxHeaderTypeDef TxHeader;
+    CAN_HandleTypeDef instance;
+    u32 pTxMailbox;
+
+    u8 can_number;
+
+    gpio_spec_t can_tx_io;
+    gpio_spec_t can_rx_io;
+    IRQn_Type irq_no;
+    u32 preempt_priority;
+    u32 sub_priority;
 } can_dev_t;
 
+can_dev_t can_dev_g[] = {
+    [0] = {
+        .instance = {
+            .Instance = CAN1,
+            .Init.Prescaler = 5,
+            .Init.Mode = CAN_MODE_NORMAL,
+            .Init.SyncJumpWidth = CAN_SJW_1TQ,
+            .Init.TimeSeg1 = CAN_BS1_3TQ,
+            .Init.TimeSeg2 = CAN_BS1_5TQ,
+            .Init.TimeTriggeredMode = DISABLE,
+            .Init.AutoBusOff = ENABLE,
+            .Init.AutoWakeUp = ENABLE,
+            .Init.AutoRetransmission = ENABLE,
+            .Init.ReceiveFifoLocked = DISABLE,
+            .Init.TransmitFifoPriority = DISABLE,
+        },
 
+        .can_number = 1,
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        .can_tx_io = {
+            .gpio_grp = A,
+            .gpio_num = 12,
+        },
+        .can_rx_io = {
+            .gpio_grp = A,
+            .gpio_num = 11,
+        },
+        .irq_no = USB_LP_CAN1_RX0_IRQn,
+        .preempt_priority = 2,
+        .sub_priority = 0,
+    }
+};
 
 
 
@@ -57,35 +78,45 @@ void MX_CAN_Init(void)
     hcan.Init.AutoRetransmission = ENABLE;
     hcan.Init.ReceiveFifoLocked = DISABLE;
     hcan.Init.TransmitFifoPriority = DISABLE;
-    if (HAL_CAN_Init(&hcan) != HAL_OK) {
-        ZSS_ASSERT_WITH_LOG("CAN initialization failed\r\n");
+    if (HAL_OK == HAL_CAN_Init(&hcan)) {
+        ZSS_CAN_LOGI("CAN initialization successful.\r\n");
+    } else {
+        ZSS_ASSERT_WITH_LOG("CAN initialization failed.\r\n");
     }
 }
 
 void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle)
 {
+    __HAL_RCC_AFIO_CLK_ENABLE();
+    for (u32 i = 0; i < ZSS_ARRAY_SIZE(can_dev_g); i++) {
+        if (canHandle->Instance == can_dev_g[i].instance.Instance) {
+            switch (can_dev_g[i].can_number) {
+            case 1:
+                __HAL_RCC_CAN1_CLK_ENABLE();
+                break;
+            default:
+                ZSS_ASSERT_WITH_LOG("__HAL_RCC_CAN[%d]_CLK_ENABLE Unsupported", can_dev_g[i].can_number);
+            }
 
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    if (canHandle->Instance == CAN1) {
+            switch (can_dev_g[i].can_tx_io.gpio_grp) {
+                CAN_TX_CASE_GPIO_INIT(A, can_dev_g[i].can_tx_io.gpio_num);
+                CAN_TX_CASE_GPIO_INIT(B, can_dev_g[i].can_tx_io.gpio_num);
+                CAN_TX_CASE_GPIO_INIT(C, can_dev_g[i].can_tx_io.gpio_num);
+                CAN_TX_CASE_GPIO_INIT(D, can_dev_g[i].can_tx_io.gpio_num);
+                CAN_TX_CASE_GPIO_INIT(E, can_dev_g[i].can_tx_io.gpio_num);
+            }
 
-        __HAL_RCC_CAN1_CLK_ENABLE();
+            switch (can_dev_g[i].can_rx_io.gpio_grp) {
+                CAN_RX_CASE_GPIO_INIT(A, can_dev_g[i].can_rx_io.gpio_num);
+                CAN_RX_CASE_GPIO_INIT(B, can_dev_g[i].can_rx_io.gpio_num);
+                CAN_RX_CASE_GPIO_INIT(C, can_dev_g[i].can_rx_io.gpio_num);
+                CAN_RX_CASE_GPIO_INIT(D, can_dev_g[i].can_rx_io.gpio_num);
+                CAN_RX_CASE_GPIO_INIT(E, can_dev_g[i].can_rx_io.gpio_num);
+            }
 
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-
-        GPIO_InitStruct.Pin = GPIO_PIN_11;
-        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull = GPIO_PULLUP;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin = GPIO_PIN_12;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-
-        HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
-
+            HAL_NVIC_SetPriority(can_dev_g[i].irq_no, can_dev_g[i].preempt_priority, can_dev_g[i].sub_priority);
+            HAL_NVIC_EnableIRQ(can_dev_g[i].irq_no);
+        }
     }
 }
 
@@ -131,7 +162,7 @@ HAL_StatusTypeDef Can_Config(void)
 
 
 
-    ZSS_CAN_LOGI("CAN initialization successful\r\n");
+    ZSS_CAN_LOGI("CAN Config successful.\r\n");
     return HAL_OK;
 }
 
@@ -143,7 +174,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     if (HAL_CAN_GetRxMessage(hcan, CAN_FILTER_FIFO0, &CanRx, Can_RxData) == HAL_OK) {
-        ZSS_CAN_LOGI("Can_RxData[0]:[%4d]    RX_ID[%x]\r\n", Can_RxData[0], CanRx.ExtId);
+        ZSS_CAN_LOGI("Can_RxData[0]:[%4d]    RX_ID[%x]      I am [%x]\r\n", Can_RxData[0], CanRx.ExtId, CAN_ID);
     }
 }
 

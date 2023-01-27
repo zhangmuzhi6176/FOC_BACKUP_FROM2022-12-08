@@ -4,25 +4,29 @@
 #include "zmz_system_hardware.h"
 #include "stm32f1xx_hal.h"
 
-
 #define ZSS_CAN_LOGD(KEY, format, ...) ZSS_LOGD("CAN", KEY, format, ##__VA_ARGS__)
 #define ZSS_CAN_LOGI(format, ...) ZSS_LOGI("CAN", format, ##__VA_ARGS__)
 #define ZSS_CAN_LOGW(format, ...) ZSS_LOGW("CAN", format, ##__VA_ARGS__)
 #define ZSS_CAN_LOGE(format, ...) ZSS_LOGE("CAN", format, ##__VA_ARGS__)
 #define ZSS_CAN_LOGF(format, ...) ZSS_LOGF("CAN", format, ##__VA_ARGS__)
 
+#define CAN_TX_CASE_GPIO_INIT(CASE, PIN)                                              \
+    {                                                                                 \
+        CASE_GPIO_INIT(CASE, PIN, GPIO_MODE_AF_PP, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH) \
+    }
+
+#define CAN_RX_CASE_GPIO_INIT(CASE, PIN)                                                 \
+    {                                                                                    \
+        CASE_GPIO_INIT(CASE, PIN, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH) \
+    }
 
 
 
 
 
 
-
-#define CAN_ID ((uint32_t)0x1315)
+#define CAN_ID ((uint32_t)0x1316)
 #define CAN_FILTER_ID ((uint32_t)0x1314)
-
-
-
 
 extern CAN_HandleTypeDef hcan;
 
@@ -32,11 +36,7 @@ extern u32 pTxMailbox;
 extern CAN_RxHeaderTypeDef CanRx;
 extern CAN_TxHeaderTypeDef CanTx;
 
-
-
 void MX_CAN_Init(void);
 HAL_StatusTypeDef Can_Config(void);
-
-
 
 #endif
