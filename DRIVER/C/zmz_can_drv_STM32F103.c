@@ -2,7 +2,8 @@
 #include "zmz_uart_hal.h"
 
 typedef struct can_dev {
-    u8 can_number;
+    CAN_RxHeaderTypeDef CanRx;
+    CAN_TxHeaderTypeDef CanTx;
 } can_dev_t;
 
 
@@ -57,7 +58,7 @@ void MX_CAN_Init(void)
     hcan.Init.ReceiveFifoLocked = DISABLE;
     hcan.Init.TransmitFifoPriority = DISABLE;
     if (HAL_CAN_Init(&hcan) != HAL_OK) {
-        printf("CAN initialization failed\r\n");
+        ZSS_ASSERT_WITH_LOG("CAN initialization failed\r\n");
     }
 }
 
@@ -130,15 +131,19 @@ HAL_StatusTypeDef Can_Config(void)
 
 
 
-    printf("CAN initialization successful\r\n");
+    ZSS_CAN_LOGI("CAN initialization successful\r\n");
     return HAL_OK;
+}
+
+void USB_LP_CAN1_RX0_IRQHandler(void)
+{
+  HAL_CAN_IRQHandler(&hcan);
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    printf("CAN IT HAL_CAN_RxFifo0MsgPendingCallback\r\n");
     if (HAL_CAN_GetRxMessage(hcan, CAN_FILTER_FIFO0, &CanRx, Can_RxData) == HAL_OK) {
-        printf("Rx:%d %d %d\r\n", Can_RxData[0], Can_RxData[1], Can_RxData[2]);
+        ZSS_CAN_LOGI("Can_RxData[0]:[%4d]    RX_ID[%x]\r\n", Can_RxData[0], CanRx.ExtId);
     }
 }
 

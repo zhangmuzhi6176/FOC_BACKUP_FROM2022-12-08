@@ -17,6 +17,7 @@
 #include "semphr.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 #define ZSS_MAIN_LOGD(KEY, format, ...) ZSS_LOGD("FOC_MAIN", KEY, format, ##__VA_ARGS__)
 #define ZSS_MAIN_LOGI(format, ...) ZSS_LOGI("FOC_MAIN", format, ##__VA_ARGS__)
@@ -218,7 +219,7 @@ int main(void)
     ADC_Init_Drv();
     MX_CAN_Init();
     Can_Config();
-    FOC_Init();
+    /* FOC_Init(); */
     delay_ms(500);
     RGB_Led_Blink_Times(RGB_LED_I, RGB_LED_GREEN, 0.1, 2);
     ZSS_MAIN_LOGI("+++++++++++++++++++Initialization done+++++++++++++++++++\r\n");
@@ -232,13 +233,32 @@ int main(void)
                 (TaskHandle_t *)&StartTask_Handler); //任务句柄
     /* vTaskStartScheduler(); */
 
-    /* double ang = 0; */
+    int ret = 0;
 
     while (1) {
+        ret = ret;
+
+        /* ret = HAL_CAN_AddTxMessage(&hcan, &CanTx, Can_TxData, &pTxMailbox);
+        if (HAL_OK != ret) {
+            ZSS_MAIN_LOGI("can tx failed [%d]\r\n", ret);
+        }
+
+        Can_TxData[0]++;
+        
+        delay_ms(50);
+
+        printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2)); */
+
+
+        /* ZSS_MAIN_LOGI("can running... filter ID [%d]\r\n", CAN_FILTER_ID);
+        delay_ms(1000); */
+
+
+
         /* FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
         /* FOC_Keep_Speed(FOC_I, ((MT_Get_ANGLE(ENC_NO_2) / 180) - 1) * 1440); */
 
-        FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
+        /* FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1); */
 
 
         /* ang += 1;

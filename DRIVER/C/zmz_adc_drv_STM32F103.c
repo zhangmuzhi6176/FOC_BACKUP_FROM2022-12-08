@@ -126,7 +126,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
                 __HAL_RCC_ADC2_CLK_ENABLE();
                 break;
             default:
-                ZSS_ADC_LOGE("__HAL_RCC_ADC[%d]_CLK_ENABLE Unsupported", adc_dev_g[i].adc_number);
+                ZSS_ASSERT_WITH_LOG("__HAL_RCC_ADC[%d]_CLK_ENABLE Unsupported", adc_dev_g[i].adc_number);
             }
 
             for (u32 j = 0; j < ZSS_ARRAY_SIZE(adc_dev_g[i].channels); j++) {

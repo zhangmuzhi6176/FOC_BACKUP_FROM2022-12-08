@@ -240,7 +240,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
                 __HAL_RCC_TIM4_CLK_ENABLE();
                 break;
             default:
-                ZSS_TIMER_LOGE("__HAL_RCC_TIM[%d]_CLK_ENABLE Unsupported", timer_dev_g[i].timer_number);
+                ZSS_ASSERT_WITH_LOG("__HAL_RCC_TIM[%d]_CLK_ENABLE Unsupported", timer_dev_g[i].timer_number);
             }
 
             if (true == timer_dev_g[i].enable_irq) {
@@ -273,7 +273,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
                 __HAL_RCC_TIM4_CLK_ENABLE();
                 break;
             default:
-                ZSS_TIMER_LOGE("__HAL_RCC_TIM[%d]_CLK_ENABLE Unsupported", timer_dev_g[i].timer_number);
+                ZSS_ASSERT_WITH_LOG("__HAL_RCC_TIM[%d]_CLK_ENABLE Unsupported", timer_dev_g[i].timer_number);
             }
 
             switch (timer_dev_g[i].pwm.pwm_io.gpio_grp) {

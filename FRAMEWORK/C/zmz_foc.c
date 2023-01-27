@@ -213,11 +213,10 @@ void SVPWM_Generate_Elec_Ang(foc_index_e index, double elec_angle_deg, double sv
             factor_B = stage.stage_short;
             break;
         default:
-            ZSS_FOC_LOGE("SVPWM_Generate_Mech_Ang in unsupported phase [%d].\r\n", phase);
             Timer_Set_Duty_Hal(foc_dev_g[index]->bldc_tim_idx[PHASE_A], BLDC_ZERO_TORQUE);
             Timer_Set_Duty_Hal(foc_dev_g[index]->bldc_tim_idx[PHASE_B], BLDC_ZERO_TORQUE);
             Timer_Set_Duty_Hal(foc_dev_g[index]->bldc_tim_idx[PHASE_C], BLDC_ZERO_TORQUE);
-            return;
+            ZSS_ASSERT_WITH_LOG("SVPWM_Generate_Mech_Ang in unsupported phase [%d].\r\n", phase);
         }
 
         if (svpwm_duty > BLDC_MAX_TORQUE) {
@@ -533,6 +532,9 @@ void FOC_Keep_Speed(foc_index_e index, double speed_ref)
             torq_next = _FOC_Value_Limit(torq_next, -0.0001, -1);
             break;
         default:
+            Timer_Set_Duty_Hal(foc_dev_g[index]->bldc_tim_idx[PHASE_A], BLDC_ZERO_TORQUE);
+            Timer_Set_Duty_Hal(foc_dev_g[index]->bldc_tim_idx[PHASE_B], BLDC_ZERO_TORQUE);
+            Timer_Set_Duty_Hal(foc_dev_g[index]->bldc_tim_idx[PHASE_C], BLDC_ZERO_TORQUE);
             ZSS_ASSERT_WITH_LOG("Invalid param dir[%d].\r\n", dir);
     }
     FOC_Keep_Torque(index, torq_next);
