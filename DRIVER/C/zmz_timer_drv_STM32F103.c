@@ -144,16 +144,28 @@ static timer_t timer_dev_g[] = {
     },
 };
 
-static void _Timer_PWM_Init(timer_t timer_dev)
+static void _Timer_PWM_Init(u8 timer_index)
 {
-    timer_dev.pwm.timer_output_compare_config.OCMode = TIM_OCMODE_PWM1;
-    timer_dev.pwm.timer_output_compare_config.Pulse = timer_dev.arr * (timer_dev.pwm.duty_in_percentage / 100.0);
-    timer_dev.pwm.timer_output_compare_config.OCPolarity = TIM_OCPOLARITY_HIGH;
+    int rlt = HAL_OK;
 
-    HAL_TIM_PWM_Init(&(timer_dev.tim_handler));
-    HAL_TIM_PWM_ConfigChannel(&(timer_dev.tim_handler), &(timer_dev.pwm.timer_output_compare_config), timer_dev.pwm.channel);
+    timer_dev_g[timer_index].pwm.timer_output_compare_config.OCMode = TIM_OCMODE_PWM1;
+    timer_dev_g[timer_index].pwm.timer_output_compare_config.Pulse = timer_dev_g[timer_index].arr * (timer_dev_g[timer_index].pwm.duty_in_percentage / 100.0);
+    timer_dev_g[timer_index].pwm.timer_output_compare_config.OCPolarity = TIM_OCPOLARITY_HIGH;
 
-    HAL_TIM_PWM_Start(&(timer_dev.tim_handler), timer_dev.pwm.channel);
+    rlt = HAL_TIM_PWM_Init(&(timer_dev_g[timer_index].tim_handler));
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_PWM_Init failed [%d].\r\n", timer_index, rlt);
+    }
+
+    rlt = HAL_TIM_PWM_ConfigChannel(&(timer_dev_g[timer_index].tim_handler), &(timer_dev_g[timer_index].pwm.timer_output_compare_config), timer_dev_g[timer_index].pwm.channel);
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_PWM_ConfigChannel failed [%d].\r\n", timer_index, rlt);
+    }
+
+    rlt = HAL_TIM_PWM_Start(&(timer_dev_g[timer_index].tim_handler), timer_dev_g[timer_index].pwm.channel);
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_PWM_Start failed [%d].\r\n", timer_index, rlt);
+    }
 }
 
 /*
@@ -163,6 +175,7 @@ static void _Timer_PWM_Init(timer_t timer_dev)
  */
 void Timer_Init_Drv(void)
 {
+    int rlt = HAL_OK;
     double counter_counting_freq = 0;
 
     for (u32 i = 0; i < ZSS_ARRAY_SIZE(timer_dev_g); i++) {
@@ -193,33 +206,45 @@ void Timer_Init_Drv(void)
 
         if (BASE_TIMER == timer_dev_g[i].timer_type) {
             timer_dev_g[i].tim_handler.Init.CounterMode = TIM_COUNTERMODE_UP;
-            HAL_TIM_Base_Init(&(timer_dev_g[i].tim_handler));
-            HAL_TIM_Base_Start_IT(&(timer_dev_g[i].tim_handler));
+            rlt = HAL_TIM_Base_Init(&(timer_dev_g[i].tim_handler));
+            if (HAL_OK != rlt) {
+                ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_Base_Init failed [%d].\r\n", i, rlt);
+            }
+            rlt = HAL_TIM_Base_Start_IT(&(timer_dev_g[i].tim_handler));
+            if (HAL_OK != rlt) {
+                ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_Base_Start_IT failed [%d].\r\n", i, rlt);
+            }
             ZSS_TIMER_LOGI("TIMER[%d] is initialized as BASE_TIMER at [%.3f] Hz, counter_counting_freq: [%.3f] Hz, arr: [%d].\r\n", 
             timer_dev_g[i].timer_number, timer_dev_g[i].timer_event_freq, counter_counting_freq, timer_dev_g[i].arr);
         } else if (PWM_TIMER == timer_dev_g[i].timer_type) {
             timer_dev_g[i].tim_handler.Init.CounterMode = TIM_COUNTERMODE_CENTERALIGNED3;
-            _Timer_PWM_Init(timer_dev_g[i]);
+            _Timer_PWM_Init(i);
             ZSS_TIMER_LOGI("TIMER[%d] CHANNEL[%d] is initialized as PWM_TIMER at [%.3f] Hz, counter_counting_freq: [%.3f] Hz, arr: [%d]\r\n",
                            timer_dev_g[i].timer_number, timer_dev_g[i].pwm.channel_index, timer_dev_g[i].timer_event_freq, counter_counting_freq, timer_dev_g[i].arr);
         } else if (DELAY_TIMER == timer_dev_g[i].timer_type) {
             timer_dev_g[i].tim_handler.Init.CounterMode = TIM_COUNTERMODE_DOWN;
             timer_dev_g[i].arr = (u16)(~0) - 1;
-            HAL_TIM_Base_Init(&(timer_dev_g[i].tim_handler));
+            rlt = HAL_TIM_Base_Init(&(timer_dev_g[i].tim_handler));
+            if (HAL_OK != rlt) {
+                ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_Base_Init failed [%d].\r\n", i, rlt);
+            }
             __HAL_TIM_ENABLE(&(timer_dev_g[i].tim_handler));
 
             timer_dev_g[i].system_time_rounds = 0;
             timer_dev_g[i].timer_event_freq = counter_counting_freq / 0xFFFF;
 
             if (true == timer_dev_g[i].enable_irq) {
-                HAL_TIM_Base_Start_IT(&(timer_dev_g[i].tim_handler));
+                rlt = HAL_TIM_Base_Start_IT(&(timer_dev_g[i].tim_handler));
+                if (HAL_OK != rlt) {
+                    ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_Base_Start_IT failed [%d].\r\n", i, rlt);
+                }
             }
             ZSS_TIMER_LOGI("TIMER[%d] is initialized as DELAY_TIMER, counter_counting_freq: [%.3f] Hz, timer_event_freq: [%.3f] Hz, arr: [%d], enable_irq[%d].\r\n", 
             timer_dev_g[i].timer_number, counter_counting_freq, timer_dev_g[i].timer_event_freq, timer_dev_g[i].arr, timer_dev_g[i].enable_irq);
         }
     }
 
-    ZSS_TIMER_LOGI("All timers are initialized\r\n");
+    ZSS_TIMER_LOGI("All timers have been initialized.\r\n");
 }
 
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)

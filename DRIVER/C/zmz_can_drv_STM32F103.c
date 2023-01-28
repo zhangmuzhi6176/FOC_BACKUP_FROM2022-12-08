@@ -66,6 +66,8 @@ CAN_TxHeaderTypeDef CanTx;
 
 void MX_CAN_Init(void)
 {
+    int rlt = HAL_OK;
+
     hcan.Instance = CAN1;
     hcan.Init.Prescaler = 5;
     hcan.Init.Mode = CAN_MODE_NORMAL;
@@ -78,9 +80,9 @@ void MX_CAN_Init(void)
     hcan.Init.AutoRetransmission = ENABLE;
     hcan.Init.ReceiveFifoLocked = DISABLE;
     hcan.Init.TransmitFifoPriority = DISABLE;
-    if (HAL_OK == HAL_CAN_Init(&hcan)) {
-        ZSS_CAN_LOGI("CAN initialization successful.\r\n");
-    } else {
+
+    rlt = HAL_CAN_Init(&hcan);
+    if (HAL_OK != rlt) {
         ZSS_ASSERT_WITH_LOG("CAN initialization failed.\r\n");
     }
 }

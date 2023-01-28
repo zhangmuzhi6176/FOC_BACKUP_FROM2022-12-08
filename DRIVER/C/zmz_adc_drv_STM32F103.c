@@ -92,13 +92,23 @@ static adc_dev_t adc_dev_g[] = {
 
 static void Adc_Dma_Config(u8 adc_index)
 {
+    int rlt = HAL_OK;
     __DMA1_CLK_ENABLE();
-    HAL_DMA_Init(&(adc_dev_g[adc_index].hdma_adc_handler));
+
+    rlt = HAL_DMA_Init(&(adc_dev_g[adc_index].hdma_adc_handler));
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("adc_dev[%d] HAL_DMA_Init failed [%d].\r\n", adc_index, rlt);
+    }
+
     __HAL_LINKDMA(&(adc_dev_g[adc_index].adc_handler), DMA_Handle, adc_dev_g[adc_index].hdma_adc_handler);
+
+    ZSS_ADC_LOGI("adc_dev[%d] Adc_Dma_Config successful.\r\n", adc_index);
 }
 
 void ADC_Init_Drv(void)
 {
+    int rlt = HAL_OK;
+
     for (u8 i = 0; i < ZSS_ARRAY_SIZE(adc_dev_g); i++) {
         Adc_Dma_Config(i);
         HAL_RCCEx_PeriphCLKConfig(&(adc_dev_g[i].adc_clk_select));
@@ -106,12 +116,22 @@ void ADC_Init_Drv(void)
         HAL_ADCEx_Calibration_Start(&(adc_dev_g[i].adc_handler));
 
         for (u8 j = 0; j < ZSS_ARRAY_SIZE(adc_dev_g[i].channels); j++) {
-            HAL_ADC_ConfigChannel(&(adc_dev_g[i].adc_handler), &(adc_dev_g[i].channels[j].channel_conf));
+            rlt = HAL_ADC_ConfigChannel(&(adc_dev_g[i].adc_handler), &(adc_dev_g[i].channels[j].channel_conf));
+            if (HAL_OK != rlt) {
+                ZSS_ASSERT_WITH_LOG("adc_dev[%d] channel[%d] HAL_ADC_ConfigChannel failed [%d].\r\n", i, j, rlt);
+            }
         }
 
-        HAL_ADC_Start_DMA(&(adc_dev_g[i].adc_handler), (uint32_t *)(adc_dev_g[i].adc_dma_buffer),
+        rlt = HAL_ADC_Start_DMA(&(adc_dev_g[i].adc_handler), (uint32_t *)(adc_dev_g[i].adc_dma_buffer),
                           (ZSS_ARRAY_SIZE(adc_dev_g[i].channels) * adc_dev_g[i].adc_dma_buffer_depth));
+        if (HAL_OK != rlt) {
+            ZSS_ASSERT_WITH_LOG("adc_dev[%d] HAL_ADC_Start_DMA failed [%d].\r\n", i, rlt);
+        }
+
+        ZSS_ADC_LOGI("adc_dev[%d] init successful.\r\n", i);
     }
+
+    ZSS_TIMER_LOGI("All ADCs have been initialized.\r\n");
 }
 
 void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
