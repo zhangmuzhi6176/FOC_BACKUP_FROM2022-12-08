@@ -11,21 +11,21 @@
 #define GPIOA_ODR_Offset 12
 #define GPIOA_IDR_Offset 8
 
-#define GPIOA_ODR_Addr (GPIOA_BASE + GPIOA_ODR_Offset) // 0x4001080C
-#define GPIOB_ODR_Addr (GPIOB_BASE + GPIOA_ODR_Offset) // 0x40010C0C
-#define GPIOC_ODR_Addr (GPIOC_BASE + GPIOA_ODR_Offset) // 0x4001100C
-#define GPIOD_ODR_Addr (GPIOD_BASE + GPIOA_ODR_Offset) // 0x4001140C
-#define GPIOE_ODR_Addr (GPIOE_BASE + GPIOA_ODR_Offset) // 0x4001180C
-#define GPIOF_ODR_Addr (GPIOF_BASE + GPIOA_ODR_Offset) // 0x40011A0C
-#define GPIOG_ODR_Addr (GPIOG_BASE + GPIOA_ODR_Offset) // 0x40011E0C
+#define GPIOA_ODR_Addr (GPIOA_BASE + GPIOA_ODR_Offset)
+#define GPIOB_ODR_Addr (GPIOB_BASE + GPIOA_ODR_Offset)
+#define GPIOC_ODR_Addr (GPIOC_BASE + GPIOA_ODR_Offset)
+#define GPIOD_ODR_Addr (GPIOD_BASE + GPIOA_ODR_Offset)
+#define GPIOE_ODR_Addr (GPIOE_BASE + GPIOA_ODR_Offset)
+#define GPIOF_ODR_Addr (GPIOF_BASE + GPIOA_ODR_Offset)
+#define GPIOG_ODR_Addr (GPIOG_BASE + GPIOA_ODR_Offset)
 
-#define GPIOA_IDR_Addr (GPIOA_BASE + GPIOA_IDR_Offset) // 0x40010808
-#define GPIOB_IDR_Addr (GPIOB_BASE + GPIOA_IDR_Offset) // 0x40010C08
-#define GPIOC_IDR_Addr (GPIOC_BASE + GPIOA_IDR_Offset) // 0x40011008
-#define GPIOD_IDR_Addr (GPIOD_BASE + GPIOA_IDR_Offset) // 0x40011408
-#define GPIOE_IDR_Addr (GPIOE_BASE + GPIOA_IDR_Offset) // 0x40011808
-#define GPIOF_IDR_Addr (GPIOF_BASE + GPIOA_IDR_Offset) // 0x40011A08
-#define GPIOG_IDR_Addr (GPIOG_BASE + GPIOA_IDR_Offset) // 0x40011E08
+#define GPIOA_IDR_Addr (GPIOA_BASE + GPIOA_IDR_Offset)
+#define GPIOB_IDR_Addr (GPIOB_BASE + GPIOA_IDR_Offset)
+#define GPIOC_IDR_Addr (GPIOC_BASE + GPIOA_IDR_Offset)
+#define GPIOD_IDR_Addr (GPIOD_BASE + GPIOA_IDR_Offset)
+#define GPIOE_IDR_Addr (GPIOE_BASE + GPIOA_IDR_Offset)
+#define GPIOF_IDR_Addr (GPIOF_BASE + GPIOA_IDR_Offset)
+#define GPIOG_IDR_Addr (GPIOG_BASE + GPIOA_IDR_Offset)
 
 /* n MUST BE SMALLER THAN 16 !!! */
 #define PAout(n) BIT_ADDR(GPIOA_ODR_Addr, n)
@@ -53,9 +53,12 @@
 #define ZSS_SHUT_DOWN_IT __set_PRIMASK(1)
 #define ZSS_TURN_UP_IT __set_PRIMASK(0)
 
-#define MAIN_FREQ 72 /* Hz */
+#define Mega                    1000000
 
 void Stm32_Clock_Init(u32 PLL);
-u16 Stm32_Get_Clock_MHz(void);
+u32 Stm32_Get_Sys_Clock_MHz(void);
+u32 Stm32_Get_HClock_MHz(void);
+u32 Stm32_Get_PCLK_1_MHz(void);
+u32 Stm32_Get_PCLK_2_MHz(void);
 
 #endif

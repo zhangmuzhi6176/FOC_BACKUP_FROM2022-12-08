@@ -20,23 +20,38 @@
         CASE_GPIO_INIT(CASE, PIN, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH) \
     }
 
+#define CAN_BUF_SIZE                        8
+#define CAN_TEMPLATE_FILTER_NUM             4   
 
+extern CAN_FilterTypeDef CAN_filter_conf_template;
 
+typedef enum can_index {
+    CAN_I = 0,
+} can_index_e;
 
+typedef enum can_frame_type {
+    CAN_DATA = CAN_RTR_DATA,
+    CAN_REMOTE = CAN_RTR_REMOTE,
+} can_frame_type_e;
 
+typedef enum can_ID_type {
+    CAN_STID = CAN_ID_STD,
+    CAN_EXID = CAN_ID_EXT,
+} can_ID_type_e;
 
-#define CAN_ID ((uint32_t)0x1316)
-#define CAN_FILTER_ID ((uint32_t)0x1314)
+typedef enum can_filter_type {
+    CAN_LIST_MODE = CAN_FILTERMODE_IDLIST,
+    CAN_MASK_MODE = CAN_FILTERMODE_IDMASK,
+} can_filter_type_e;
 
-extern CAN_HandleTypeDef hcan;
+typedef enum can_filter_size {
+    CAN_16_BIT = CAN_FILTERSCALE_16BIT,
+    CAN_32_BIT = CAN_FILTERSCALE_32BIT,
+} can_filter_size_e;
 
-extern u8 Can_RxData[8];
-extern u8 Can_TxData[8];
-extern u32 pTxMailbox;
-extern CAN_RxHeaderTypeDef CanRx;
-extern CAN_TxHeaderTypeDef CanTx;
-
-void MX_CAN_Init(void);
-HAL_StatusTypeDef Can_Config(void);
+void CAN_Init_Drv(void);
+void CAN_Config_Tx_Drv(can_index_e index, can_frame_type_e frame_type, can_ID_type_e ID_type);
+HAL_StatusTypeDef CAN_Config_Rx_Drv(can_index_e index, CAN_FilterTypeDef CAN_filter_conf);
+HAL_StatusTypeDef CAN_Send(can_index_e index, u8 *tx_data);
 
 #endif

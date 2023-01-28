@@ -80,7 +80,7 @@ static uart_t uart_dev_g[] = {
     },
 };
 
-void Uart_Init(void)
+void Uart_Init_Drv(void)
 {
     for (int i = 0; i < ZSS_ARRAY_SIZE(uart_dev_g); i++) {
         uart_dev_g[i].uart_handler.Instance = uart_dev_g[i].instance;
@@ -138,13 +138,13 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart)
     }
 }
 
-u16 Get_Uart_Receive_len(u8 index)
+u16 Get_Uart_Receive_len_Drv(u8 index)
 {
     u16 len = uart_dev_g[index].rx_status & 0x3fff;
     return len;
 }
 
-uart_receive_status_e Get_Uart_Receive_Status(u8 index)
+uart_receive_status_e Get_Uart_Receive_Status_Drv(u8 index)
 {
     if (uart_dev_g[index].rx_status & ((u32)1 << LF_RECEIVED)) {
         return UART_RECEIVE_COMPLETED;
@@ -155,7 +155,7 @@ uart_receive_status_e Get_Uart_Receive_Status(u8 index)
     }
 }
 
-void Set_Uart_Receive_Status(u8 index, uart_receive_status_e flag)
+void Set_Uart_Receive_Status_Drv(u8 index, uart_receive_status_e flag)
 {
     switch (flag) {
     case UART_RECEIVE_INCOMPLETED:
@@ -175,22 +175,22 @@ static void _Uart_Receive(uart_t *uart_dev)
     u8 received_byte = 0;
     u8 index = ZSS_INDEX_IN_ARRAY(uart_dev_g, *uart_dev);
     received_byte = uart_dev->instance->DR;
-    if (UART_RECEIVE_COMPLETED != Get_Uart_Receive_Status(index)) {
-        if (UART_RECEIVE_ALMOST_COMPLETED != Get_Uart_Receive_Status(index)) {
+    if (UART_RECEIVE_COMPLETED != Get_Uart_Receive_Status_Drv(index)) {
+        if (UART_RECEIVE_ALMOST_COMPLETED != Get_Uart_Receive_Status_Drv(index)) {
             if ('\r' != received_byte) {
-                uart_dev->rx_buffer[Get_Uart_Receive_len(index)] = received_byte;
+                uart_dev->rx_buffer[Get_Uart_Receive_len_Drv(index)] = received_byte;
                 uart_dev->rx_status++;
                 if (uart_dev->rx_status > (UART_RX_BUFFERSIZE - 1)) {
-                    Set_Uart_Receive_Status(index, UART_RECEIVE_INCOMPLETED);
+                    Set_Uart_Receive_Status_Drv(index, UART_RECEIVE_INCOMPLETED);
                 }
             } else {
-                Set_Uart_Receive_Status(index, UART_RECEIVE_ALMOST_COMPLETED);
+                Set_Uart_Receive_Status_Drv(index, UART_RECEIVE_ALMOST_COMPLETED);
             }
         } else {
             if ('\n' == received_byte) {
-                Set_Uart_Receive_Status(index, UART_RECEIVE_COMPLETED);
+                Set_Uart_Receive_Status_Drv(index, UART_RECEIVE_COMPLETED);
             } else {
-                Set_Uart_Receive_Status(index, UART_RECEIVE_INCOMPLETED);
+                Set_Uart_Receive_Status_Drv(index, UART_RECEIVE_INCOMPLETED);
             }
         }
     }
@@ -199,14 +199,14 @@ static void _Uart_Receive(uart_t *uart_dev)
 static void _Uart_CMD_DRV(uart_t *uart_dev)
 {
     u8 index = ZSS_INDEX_IN_ARRAY(uart_dev_g, *uart_dev);
-    u8 len = Get_Uart_Receive_len(index) + 1;
+    u8 len = Get_Uart_Receive_len_Drv(index) + 1;
     char *cmd = (char *)malloc(len);
-    if (UART_RECEIVE_COMPLETED == Get_Uart_Receive_Status(index)) {
+    if (UART_RECEIVE_COMPLETED == Get_Uart_Receive_Status_Drv(index)) {
         snprintf(cmd, len, "%s", &uart_dev_g[index].rx_buffer[0]);
         ZSS_UART_LOGI("WHOLE CMD is: [%s], CMD LENGTH: [%d]\r\n", cmd, len);
         Uart_Cmd(index, cmd);
 
-        Set_Uart_Receive_Status(index, UART_RECEIVE_INCOMPLETED);
+        Set_Uart_Receive_Status_Drv(index, UART_RECEIVE_INCOMPLETED);
     }
     free(cmd);
 }
@@ -220,12 +220,12 @@ void USART1_IRQHandler(void)
     _Uart_CMD_DRV(&uart_dev_g[UART_1]);
 }
 
-bool Get_Uart_LOG_D_Status(u8 index)
+bool Get_Uart_LOG_D_Status_Drv(u8 index)
 {
     return uart_dev_g[index].is_LOG_D_ON;
 }
 
-void Set_Uart_LOG_D_Status(u8 index, bool status)
+void Set_Uart_LOG_D_Status_Drv(u8 index, bool status)
 {
     if (false == status) {
         memset(&(uart_dev_g[index].key_LOG_D[0]), 0, LOG_D_KEY_MAX);
@@ -233,7 +233,7 @@ void Set_Uart_LOG_D_Status(u8 index, bool status)
     uart_dev_g[index].is_LOG_D_ON = status;
 }
 
-bool Match_Uart_LOG_D_KEY(u8 index, const char *key)
+bool Match_Uart_LOG_D_KEY_Drv(u8 index, const char *key)
 {
     size_t len_key = strlen(key);
     size_t len_cache = strlen(&(uart_dev_g[index].key_LOG_D[0]));
@@ -244,23 +244,23 @@ bool Match_Uart_LOG_D_KEY(u8 index, const char *key)
     }
 }
 
-void Set_Uart_LOG_D_KEY(u8 index, const char *key)
+void Set_Uart_LOG_D_KEY_Drv(u8 index, const char *key)
 {
     memset(&(uart_dev_g[index].key_LOG_D[0]), 0, LOG_D_KEY_MAX);
     strlcpy(&(uart_dev_g[index].key_LOG_D[0]), key, LOG_D_KEY_MAX);
 }
 
-void Set_Uart_DBG_INT(u8 index, int val, u8 dbg_int_idx)
+void Set_Uart_DBG_INT_Drv(u8 index, int val, u8 dbg_int_idx)
 {
     uart_dev_g[index].dbg_int[dbg_int_idx] = val;
 }
 
-int Get_Uart_DBG_INT(u8 index, u8 dbg_int_idx)
+int Get_Uart_DBG_INT_Drv(u8 index, u8 dbg_int_idx)
 {
     return uart_dev_g[index].dbg_int[dbg_int_idx];
 }
 
-void Clean_Uart_DBG_INT(u8 index)
+void Clear_Uart_DBG_INT_Drv(u8 index)
 {
     memset(&(uart_dev_g[index].dbg_int[0]), 0, DBG_INT_MAX * sizeof(int));
 }

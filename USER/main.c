@@ -101,14 +101,14 @@ void task1_task(void *pvParameters)
         /* angle_deg_1 -= 90;
         if (angle_deg_1 >= 360*11) angle_deg_1 = 0; */
 
-        /* printf("%d, %d, %d, %d, %d\r\n", Get_Uart_DBG_INT(0, 0), Get_Uart_DBG_INT(0, 1), Get_Uart_DBG_INT(0, 2), Get_Uart_DBG_INT(0, 3), Get_Uart_DBG_INT(0, 4)); */
+        /* printf("%d, %d, %d, %d, %d\r\n", Get_Uart_DBG_INT_Drv(0, 0), Get_Uart_DBG_INT_Drv(0, 1), Get_Uart_DBG_INT_Drv(0, 2), Get_Uart_DBG_INT_Drv(0, 3), Get_Uart_DBG_INT_Drv(0, 4)); */
 
-        /* if(_FOC_Get_Elec_angle(FOC_I) < (double)Get_Uart_DBG_INT(0, 0)*11) {
+        /* if(_FOC_Get_Elec_angle(FOC_I) < (double)Get_Uart_DBG_INT_Drv(0, 0)*11) {
             cur_angle = _FOC_Get_Elec_angle(FOC_I);
-            next_angle = cur_angle + (double)Get_Uart_DBG_INT(0, 1);
+            next_angle = cur_angle + (double)Get_Uart_DBG_INT_Drv(0, 1);
             if (next_angle > 360*11) next_angle -= 360*11;
             if (next_angle < 0) next_angle += 360*11;
-            SVPWM_Generate_Elec_Ang(FOC_I, next_angle, Get_Uart_DBG_INT(0, 2));
+            SVPWM_Generate_Elec_Ang(FOC_I, next_angle, Get_Uart_DBG_INT_Drv(0, 2));
             printf("%4d, %-*.3f, %-*.3f, %-*.3f\r\n", i++, 8, cur_angle, 8, next_angle, 8, cur_angle - last_angle);
             last_angle = cur_angle;
         } else {
@@ -116,13 +116,13 @@ void task1_task(void *pvParameters)
             i = 0;
         } */
 
-        /* if(Get_Uart_DBG_INT(0, 0)) {
+        /* if(Get_Uart_DBG_INT_Drv(0, 0)) {
             cur_angle = _FOC_Get_Elec_angle(FOC_I);
-            angle_deg_1 += Get_Uart_DBG_INT(0, 1);
+            angle_deg_1 += Get_Uart_DBG_INT_Drv(0, 1);
             if (angle_deg_1 < 0) angle_deg_1 += 360*11;
-            if (i >= (Get_Uart_DBG_INT(0, 2) / (abs(Get_Uart_DBG_INT(0, 1))))*11) Set_Uart_DBG_INT(0, 0, 0);
-            SVPWM_Generate_Elec_Ang(FOC_I, angle_deg_1, Get_Uart_DBG_INT(0, 3));
-            printf("%4d, %-*.3f, %-*.3f, %-*.3f\r\n", i++, 8, (angle_deg_1-Get_Uart_DBG_INT(0, 1)), 8, cur_angle, 8, (angle_deg_1-Get_Uart_DBG_INT(0, 1)) - cur_angle);
+            if (i >= (Get_Uart_DBG_INT_Drv(0, 2) / (abs(Get_Uart_DBG_INT_Drv(0, 1))))*11) Set_Uart_DBG_INT_Drv(0, 0, 0);
+            SVPWM_Generate_Elec_Ang(FOC_I, angle_deg_1, Get_Uart_DBG_INT_Drv(0, 3));
+            printf("%4d, %-*.3f, %-*.3f, %-*.3f\r\n", i++, 8, (angle_deg_1-Get_Uart_DBG_INT_Drv(0, 1)), 8, cur_angle, 8, (angle_deg_1-Get_Uart_DBG_INT_Drv(0, 1)) - cur_angle);
         } else {
             SVPWM_Generate_Elec_Ang(FOC_I, _FOC_Get_Elec_angle(FOC_I) + 90, 0);
             angle_deg_1 = 0;
@@ -141,7 +141,7 @@ void task1_task(void *pvParameters)
         ZSS_MAIN_LOGD("ENC_NO_2", "angle_deg_1: [%.3f]\r\n", angle_deg_1); */
 
         taskEXIT_CRITICAL(); //退出临界区
-        /* vTaskDelay(Get_Uart_DBG_INT(0, 4)); */
+        /* vTaskDelay(Get_Uart_DBG_INT_Drv(0, 4)); */
     }
 }
 
@@ -210,15 +210,16 @@ int main(void)
     ZSS_SHUT_DOWN_IT;
     HAL_Init();                     //初始化HAL库
     Stm32_Clock_Init(RCC_PLL_MUL9); //设置时钟,72M
-    Uart_Init();
+    Uart_Init_Drv();
     Timer_Init_Hal();
     delay_init();
     RGB_Led_Init();
     MT_Init();
     IIC_Init_Hal();
     ADC_Init_Drv();
-    MX_CAN_Init();
-    Can_Config();
+    CAN_Init_Drv();
+    CAN_Config_Tx_Drv(CAN_I, CAN_DATA, CAN_STID);
+    CAN_Config_Rx_Drv(CAN_I, CAN_filter_conf_template);
     /* FOC_Init(); */
     delay_ms(500);
     RGB_Led_Blink_Times(RGB_LED_I, RGB_LED_GREEN, 0.1, 2);
@@ -234,31 +235,38 @@ int main(void)
     /* vTaskStartScheduler(); */
 
     int ret = 0;
+    u8 CAN_TxData[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 
+    CAN_filter_conf_template.FilterIdHigh = 0;
     while (1) {
         ret = ret;
+        CAN_TxData[0] = CAN_TxData[0];
 
-        /* ret = HAL_CAN_AddTxMessage(&hcan, &CanTx, Can_TxData, &pTxMailbox);
+
+        /* ret = CAN_Send(CAN_I, CAN_TxData);
         if (HAL_OK != ret) {
             ZSS_MAIN_LOGI("can tx failed [%d]\r\n", ret);
         }
 
-        Can_TxData[0]++;
+        CAN_TxData[0]++;
         
-        delay_ms(50);
+        delay_ms(100);
 
         printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2)); */
 
 
-        /* ZSS_MAIN_LOGI("can running... filter ID [%d]\r\n", CAN_FILTER_ID);
-        delay_ms(1000); */
+
+
+
+        /* ZSS_MAIN_LOGI("can running...\r\n");
+        delay_ms(5000); */
 
 
 
         /* FOC_Keep_Torque(FOC_I, (MT_Get_ANGLE(ENC_NO_2) / 180) - 1); */
         /* FOC_Keep_Speed(FOC_I, ((MT_Get_ANGLE(ENC_NO_2) / 180) - 1) * 1440); */
 
-        FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1);
+        /* FOC_Keep_Position(FOC_I, MT_Get_ANGLE(ENC_NO_2), 1); */
 
 
         /* ang += 1;
@@ -298,32 +306,32 @@ int main(void)
 
 
 
-        /* if (Get_Uart_DBG_INT(0, 0)) {
+        /* if (Get_Uart_DBG_INT_Drv(0, 0)) {
             Timer_Set_Duty_Hal(0, MT_Get_ANGLE(ENC_NO_2)/3.6);
         } else {
             Timer_Set_Duty_Hal(0, 0);
         }
-        if (Get_Uart_DBG_INT(0, 1)) {
+        if (Get_Uart_DBG_INT_Drv(0, 1)) {
             Timer_Set_Duty_Hal(1, MT_Get_ANGLE(ENC_NO_2)/3.6);
         } else {
             Timer_Set_Duty_Hal(1, 0);
         }
-        if (Get_Uart_DBG_INT(0, 2)) {
+        if (Get_Uart_DBG_INT_Drv(0, 2)) {
             Timer_Set_Duty_Hal(2, MT_Get_ANGLE(ENC_NO_2)/3.6);
         } else {
             Timer_Set_Duty_Hal(2, 0);
         }
-        if (Get_Uart_DBG_INT(0, 3)) {
+        if (Get_Uart_DBG_INT_Drv(0, 3)) {
             Timer_Set_Duty_Hal(4, MT_Get_ANGLE(ENC_NO_2)/3.6);
         } else {
             Timer_Set_Duty_Hal(4, 100);
         }
-        if (Get_Uart_DBG_INT(0, 4)) {
+        if (Get_Uart_DBG_INT_Drv(0, 4)) {
             Timer_Set_Duty_Hal(5, MT_Get_ANGLE(ENC_NO_2)/3.6);
         } else {
             Timer_Set_Duty_Hal(5, 100);
         }
-        if (Get_Uart_DBG_INT(0, 5)) {
+        if (Get_Uart_DBG_INT_Drv(0, 5)) {
             Timer_Set_Duty_Hal(6, MT_Get_ANGLE(ENC_NO_2)/3.6);
         } else {
             Timer_Set_Duty_Hal(6, 100);
@@ -337,7 +345,7 @@ int main(void)
             delay_ms(500);
         } */
 
-        /* RGB_Led_Set(RGB_LED_I, (double)Get_Uart_DBG_INT(0, 3), (double)Get_Uart_DBG_INT(0, 4), (double)Get_Uart_DBG_INT(0, 5)); */
+        /* RGB_Led_Set(RGB_LED_I, (double)Get_Uart_DBG_INT_Drv(0, 3), (double)Get_Uart_DBG_INT_Drv(0, 4), (double)Get_Uart_DBG_INT_Drv(0, 5)); */
 
 
         /* printf("Timer_Get_System_Time_Second_Drv [%f]\r\n", Timer_Get_System_Time_Second_Drv());

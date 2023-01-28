@@ -29,7 +29,22 @@ void Stm32_Clock_Init(u32 PLLMUL)
     }
 }
 
-u16 Stm32_Get_Clock_MHz(void)
+u32 Stm32_Get_Sys_Clock_MHz(void)
 {
-    return MAIN_FREQ;
+    return (HAL_RCC_GetSysClockFreq() / Mega);
+}
+
+u32 Stm32_Get_HClock_MHz(void)
+{
+    return (HAL_RCC_GetHCLKFreq() / Mega);
+}
+
+u32 Stm32_Get_PCLK_1_MHz(void)
+{
+    return (HAL_RCC_GetPCLK1Freq() / Mega);
+}
+
+u32 Stm32_Get_PCLK_2_MHz(void)
+{
+    return (HAL_RCC_GetPCLK2Freq() / Mega);
 }

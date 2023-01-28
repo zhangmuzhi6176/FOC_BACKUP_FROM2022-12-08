@@ -33,6 +33,8 @@ typedef struct timer {
 
     u32 system_time_rounds;
     u16 system_time_ticks;
+
+    u32 clk_source_MHz;
 } timer_t;
 
 static timer_t timer_dev_g[] = {
@@ -177,23 +179,57 @@ void Timer_Init_Drv(void)
 {
     int rlt = HAL_OK;
     double counter_counting_freq = 0;
+    u32 system_clk_MHz = Stm32_Get_Sys_Clock_MHz();
 
     for (u32 i = 0; i < ZSS_ARRAY_SIZE(timer_dev_g); i++) {
+        switch (timer_dev_g[i].timer_number) {
+        case 1:
+            if (system_clk_MHz == Stm32_Get_PCLK_2_MHz()) {
+                timer_dev_g[i].clk_source_MHz = Stm32_Get_PCLK_2_MHz();
+            } else {
+                timer_dev_g[i].clk_source_MHz = 2 * Stm32_Get_PCLK_2_MHz();
+            }
+            break;
+        case 2:
+            if (system_clk_MHz == Stm32_Get_PCLK_1_MHz()) {
+                timer_dev_g[i].clk_source_MHz = Stm32_Get_PCLK_1_MHz();
+            } else {
+                timer_dev_g[i].clk_source_MHz = 2 * Stm32_Get_PCLK_1_MHz();
+            }
+            break;
+        case 3:
+            if (system_clk_MHz == Stm32_Get_PCLK_1_MHz()) {
+                timer_dev_g[i].clk_source_MHz = Stm32_Get_PCLK_1_MHz();
+            } else {
+                timer_dev_g[i].clk_source_MHz = 2 * Stm32_Get_PCLK_1_MHz();
+            }
+            break;
+        case 4:
+            if (system_clk_MHz == Stm32_Get_PCLK_1_MHz()) {
+                timer_dev_g[i].clk_source_MHz = Stm32_Get_PCLK_1_MHz();
+            } else {
+                timer_dev_g[i].clk_source_MHz = 2 * Stm32_Get_PCLK_1_MHz();
+            }
+            break;
+        default:
+            ZSS_ASSERT_WITH_LOG("__HAL_RCC_TIM[%d]_CLK_ENABLE Unsupported", timer_dev_g[i].timer_number);
+        }
+
         if (!timer_dev_g[i].prescaler) {
             /* user do not want to point prescaler */
             if (100000 < timer_dev_g[i].timer_event_freq && timer_dev_g[i].timer_event_freq <= 1000000) {
                 /* counter_counting_freq = 1,000,000Hz */
-                timer_dev_g[i].prescaler = Stm32_Get_Clock_MHz();
+                timer_dev_g[i].prescaler = timer_dev_g[i].clk_source_MHz;
             } else if (2 < timer_dev_g[i].timer_event_freq && timer_dev_g[i].timer_event_freq <= 100000) {
                 /* counter_counting_freq = 100,000Hz */
-                timer_dev_g[i].prescaler = 10 * Stm32_Get_Clock_MHz();
+                timer_dev_g[i].prescaler = 10 * timer_dev_g[i].clk_source_MHz;
             } else {
                 /* counter_counting_freq = 10,000Hz */
-                timer_dev_g[i].prescaler = 100 * Stm32_Get_Clock_MHz();
+                timer_dev_g[i].prescaler = 100 * timer_dev_g[i].clk_source_MHz;
             }
         }
 
-        counter_counting_freq = (1000000 * Stm32_Get_Clock_MHz()) / timer_dev_g[i].prescaler;
+        counter_counting_freq = (Mega * timer_dev_g[i].clk_source_MHz) / timer_dev_g[i].prescaler;
         timer_dev_g[i].arr = (u16)(counter_counting_freq / timer_dev_g[i].timer_event_freq);
         if (!timer_dev_g[i].arr) {
             timer_dev_g[i].arr = ARR_MIN;
@@ -214,13 +250,13 @@ void Timer_Init_Drv(void)
             if (HAL_OK != rlt) {
                 ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_Base_Start_IT failed [%d].\r\n", i, rlt);
             }
-            ZSS_TIMER_LOGI("TIMER[%d] is initialized as BASE_TIMER at [%.3f] Hz, counter_counting_freq: [%.3f] Hz, arr: [%d].\r\n", 
-            timer_dev_g[i].timer_number, timer_dev_g[i].timer_event_freq, counter_counting_freq, timer_dev_g[i].arr);
+            ZSS_TIMER_LOGI("TIMER[%d] is initialized as BASE_TIMER at [%.3f] Hz, counter_counting_freq: [%.3f] Hz, arr: [%d] CLK_source_freq: [%d]MHz.\r\n",
+                           timer_dev_g[i].timer_number, timer_dev_g[i].timer_event_freq, counter_counting_freq, timer_dev_g[i].arr, timer_dev_g[i].clk_source_MHz);
         } else if (PWM_TIMER == timer_dev_g[i].timer_type) {
             timer_dev_g[i].tim_handler.Init.CounterMode = TIM_COUNTERMODE_CENTERALIGNED3;
             _Timer_PWM_Init(i);
-            ZSS_TIMER_LOGI("TIMER[%d] CHANNEL[%d] is initialized as PWM_TIMER at [%.3f] Hz, counter_counting_freq: [%.3f] Hz, arr: [%d]\r\n",
-                           timer_dev_g[i].timer_number, timer_dev_g[i].pwm.channel_index, timer_dev_g[i].timer_event_freq, counter_counting_freq, timer_dev_g[i].arr);
+            ZSS_TIMER_LOGI("TIMER[%d] CHANNEL[%d] is initialized as PWM_TIMER at [%.3f] Hz, counter_counting_freq: [%.3f] Hz, arr: [%d] CLK_source_freq: [%d]MHz\r\n",
+                           timer_dev_g[i].timer_number, timer_dev_g[i].pwm.channel_index, timer_dev_g[i].timer_event_freq, counter_counting_freq, timer_dev_g[i].arr, timer_dev_g[i].clk_source_MHz);
         } else if (DELAY_TIMER == timer_dev_g[i].timer_type) {
             timer_dev_g[i].tim_handler.Init.CounterMode = TIM_COUNTERMODE_DOWN;
             timer_dev_g[i].arr = (u16)(~0) - 1;
@@ -239,14 +275,19 @@ void Timer_Init_Drv(void)
                     ZSS_ASSERT_WITH_LOG("timer_dev[%d] HAL_TIM_Base_Start_IT failed [%d].\r\n", i, rlt);
                 }
             }
-            ZSS_TIMER_LOGI("TIMER[%d] is initialized as DELAY_TIMER, counter_counting_freq: [%.3f] Hz, timer_event_freq: [%.3f] Hz, arr: [%d], enable_irq[%d].\r\n", 
-            timer_dev_g[i].timer_number, counter_counting_freq, timer_dev_g[i].timer_event_freq, timer_dev_g[i].arr, timer_dev_g[i].enable_irq);
+            ZSS_TIMER_LOGI("TIMER[%d] is initialized as DELAY_TIMER, counter_counting_freq: [%.3f] Hz, timer_event_freq: [%.3f] Hz, arr: [%d] CLK_source_freq: [%d]MHz, enable_irq[%d].\r\n",
+                           timer_dev_g[i].timer_number, counter_counting_freq, timer_dev_g[i].timer_event_freq, timer_dev_g[i].arr, timer_dev_g[i].clk_source_MHz, timer_dev_g[i].enable_irq);
         }
     }
 
     ZSS_TIMER_LOGI("All timers have been initialized.\r\n");
 }
 
+/*
+@tips:
+        if (APBxCLKDivider = 1), clk_source_of_timer = clk_source
+        else, clk_source_of_timer = 2 * clk_source
+ */
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
 {
     for (u32 i = 0; i < ZSS_ARRAY_SIZE(timer_dev_g); i++) {
@@ -272,7 +313,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
                 HAL_NVIC_SetPriority(timer_dev_g[i].irq_no, timer_dev_g[i].preempt_priority, timer_dev_g[i].sub_priority);
                 HAL_NVIC_EnableIRQ(timer_dev_g[i].irq_no);
                 ZSS_TIMER_LOGI("TIMER[%d] is set as preempt_priority:[%d], sub_priority:[%d]\r\n",
-                            timer_dev_g[i].timer_number, timer_dev_g[i].preempt_priority, timer_dev_g[i].sub_priority);
+                               timer_dev_g[i].timer_number, timer_dev_g[i].preempt_priority, timer_dev_g[i].sub_priority);
             }
         }
     }
@@ -323,9 +364,9 @@ void Timer_Set_Duty_Drv(u8 timer_index, double duty_in_percentage)
 /* timer_dev_g[timer_index].prescaler is not calculated in this function to save time, that's why it's called _limited */
 void Timer_Set_Period_Limited_Drv(u8 timer_index, double Period_ms)
 {
-    double counter_counting_freq = (1000000 * Stm32_Get_Clock_MHz()) / timer_dev_g[timer_index].prescaler;
+    double counter_counting_freq = (Mega * timer_dev_g[timer_index].clk_source_MHz) / timer_dev_g[timer_index].prescaler;
 
-    timer_dev_g[timer_index].timer_event_freq = 1000.0/Period_ms;
+    timer_dev_g[timer_index].timer_event_freq = 1000.0 / Period_ms;
     timer_dev_g[timer_index].arr = (u16)(counter_counting_freq / timer_dev_g[timer_index].timer_event_freq);
 
     if (!timer_dev_g[timer_index].arr) {
@@ -353,7 +394,7 @@ u8 Timer_Get_Timer_Nbr_Drv(u8 timer_index)
 
 float Timer_Get_Counting_Freq_Drv(u8 timer_index)
 {
-    float counter_counting_freq = (float)(1000000 * Stm32_Get_Clock_MHz()) / (float)timer_dev_g[timer_index].prescaler;
+    float counter_counting_freq = (float)(Mega * timer_dev_g[timer_index].clk_source_MHz) / (float)timer_dev_g[timer_index].prescaler;
     return counter_counting_freq;
 }
 
@@ -364,7 +405,7 @@ TIM_TypeDef *Timer_Get_Timer_Instance_Drv(u8 timer_index)
 
 static u32 _Timer_Get_System_Time_Rounds(void)
 {
-    if(timer_dev_g[TIMER_SYSTEM_TIME_IDX].system_time_rounds >= 0xFFFF) {
+    if (timer_dev_g[TIMER_SYSTEM_TIME_IDX].system_time_rounds >= 0xFFFF) {
         timer_dev_g[TIMER_SYSTEM_TIME_IDX].system_time_rounds = 0;
     }
     return timer_dev_g[TIMER_SYSTEM_TIME_IDX].system_time_rounds;
@@ -395,12 +436,6 @@ double Timer_Get_System_Time_Milisecond_Drv(void)
 }
 
 /* --------------------------------------------------------------- Timer Interrupt callbacks --------------------------------------------------------------- */
-
-/* TODO:在上层实现
-一系列对BLDC参数调整的API（方向，转速，力矩，目标位置）
-和void BLDC_Quantum_Ops(void)
-在TIM2中断回调中调用BLDC_Quatum_Ops()
- */
 
 void TIM1_UP_IRQHandler(void)
 {

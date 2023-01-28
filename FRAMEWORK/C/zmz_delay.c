@@ -79,7 +79,7 @@ void delay_init(void)
         delay_dev.delay_us_cb = _delay_us_timer;
         ZSS_DELAY_LOGI("[TIM%d] is initialized for delay, timer_ticks_per_us: [%.3f].\r\n", timer_number, delay_dev.timer_ticks_per_us);
     } else {
-        delay_dev.timer_ticks_per_us = Stm32_Get_Clock_MHz();
+        delay_dev.timer_ticks_per_us = Stm32_Get_Sys_Clock_MHz();
         delay_dev.delay_us_cb = _delay_us_systick;
         HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
         ZSS_DELAY_LOGI("[Systick] is used for delay.\r\n");

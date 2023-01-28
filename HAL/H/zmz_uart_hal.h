@@ -29,7 +29,7 @@
 
 #define ZSS_LOGD(MODULE, KEY, format, ...)                                      \
     {                                                                           \
-        if (Get_Uart_LOG_D_Status(UART_1) && Match_Uart_LOG_D_KEY(UART_1, KEY)) \
+        if (Get_Uart_LOG_D_Status_Drv(UART_1) && Match_Uart_LOG_D_KEY_Drv(UART_1, KEY)) \
         {                                                                       \
             ZSS_LOG("D", MODULE, format, ##__VA_ARGS__)                         \
         }                                                                       \

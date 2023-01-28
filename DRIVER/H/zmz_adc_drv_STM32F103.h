@@ -4,7 +4,7 @@
 #include "zmz_gpio_drv_STM32F103.h"
 #include "zmz_system_hardware.h"
 
-#define ADC_DMA_BUFFER_DEPTH 6
+#define ADC_DMA_BUFFER_DEPTH 20
 #define ADC_14_BIT_MID_VAL 2048
 
 #define ZSS_ADC_LOGD(KEY, format, ...) ZSS_LOGD("ADC", KEY, format, ##__VA_ARGS__)

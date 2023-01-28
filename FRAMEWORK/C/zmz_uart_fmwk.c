@@ -22,10 +22,10 @@ void Uart_parse_one(u8 uart_index, const char *input)
 
     if (!ZSS_STRNCMP("LOG_D", cmd)) {
         if (!ZSS_STRNCMP("OFF", value_c)) {
-            Set_Uart_LOG_D_Status(uart_index, false);
+            Set_Uart_LOG_D_Status_Drv(uart_index, false);
         } else {
-            Set_Uart_LOG_D_Status(uart_index, true);
-            Set_Uart_LOG_D_KEY(uart_index, value_c);
+            Set_Uart_LOG_D_Status_Drv(uart_index, true);
+            Set_Uart_LOG_D_KEY_Drv(uart_index, value_c);
         }
     } else if (!ZSS_STRNCMP("SVPWM", cmd)) {
         if (!ZSS_STRNCMP("SHUTDOWN", value_c)) {
@@ -38,13 +38,13 @@ void Uart_parse_one(u8 uart_index, const char *input)
             FOC_Current_Print_A_Cycle(FOC_I);
         }
     } else if (!ZSS_STRNCMP("DBG_GET_INT", cmd)) {
-        Clean_Uart_DBG_INT(uart_index);
+        Clear_Uart_DBG_INT_Drv(uart_index);
         for (u8 i = 0; NULL != value_c; i++) {
             dbg_int_val = strtok_r(NULL, ":", &value_c);
             if (NULL == dbg_int_val) {
                 break;
             }
-            Set_Uart_DBG_INT(uart_index, atoi(dbg_int_val), i);
+            Set_Uart_DBG_INT_Drv(uart_index, atoi(dbg_int_val), i);
         }
     }else if (!ZSS_STRNCMP("cmd", cmd)) {
     } else {

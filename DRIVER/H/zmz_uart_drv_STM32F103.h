@@ -35,16 +35,16 @@ typedef enum uart_receive_status {
         CASE_GPIO_INIT(CASE, PIN, GPIO_MODE_AF_INPUT, GPIO_PULLUP, GPIO_SPEED_FREQ_HIGH) \
     }
 
-void Uart_Init(void);
-u16 Get_Uart_Receive_len(u8 index);
-uart_receive_status_e Get_Uart_Receive_Status(u8 index);
-void Set_Uart_Receive_Status(u8 index, uart_receive_status_e flag);
-bool Get_Uart_LOG_D_Status(u8 index);
-void Set_Uart_LOG_D_Status(u8 index, bool status);
-bool Match_Uart_LOG_D_KEY(u8 index, const char *key);
-void Set_Uart_LOG_D_KEY(u8 index, const char *key);
-void Set_Uart_DBG_INT(u8 index, int val, u8 dbg_int_idx);
-int Get_Uart_DBG_INT(u8 index, u8 dbg_int_idx);
-void Clean_Uart_DBG_INT(u8 index);
+void Uart_Init_Drv(void);
+u16 Get_Uart_Receive_len_Drv(u8 index);
+uart_receive_status_e Get_Uart_Receive_Status_Drv(u8 index);
+void Set_Uart_Receive_Status_Drv(u8 index, uart_receive_status_e flag);
+bool Get_Uart_LOG_D_Status_Drv(u8 index);
+void Set_Uart_LOG_D_Status_Drv(u8 index, bool status);
+bool Match_Uart_LOG_D_KEY_Drv(u8 index, const char *key);
+void Set_Uart_LOG_D_KEY_Drv(u8 index, const char *key);
+void Set_Uart_DBG_INT_Drv(u8 index, int val, u8 dbg_int_idx);
+int Get_Uart_DBG_INT_Drv(u8 index, u8 dbg_int_idx);
+void Clear_Uart_DBG_INT_Drv(u8 index);
 
 #endif

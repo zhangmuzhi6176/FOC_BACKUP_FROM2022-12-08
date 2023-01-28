@@ -4,35 +4,55 @@
 #include "zmz_gpio_drv_STM32F103.h"
 
 typedef struct can_dev {
-    CAN_RxHeaderTypeDef RxHeader;
-    CAN_TxHeaderTypeDef TxHeader;
-    CAN_HandleTypeDef instance;
-    u32 pTxMailbox;
+    u32                             can_id;
+    u32                             can_template_filter_id[CAN_TEMPLATE_FILTER_NUM];
+    float                           baud;
 
-    u8 can_number;
+    CAN_RxHeaderTypeDef             RxHeader;
+    CAN_TxHeaderTypeDef             TxHeader;
+    CAN_HandleTypeDef               instance;
+    u32                             pTxMailbox;
 
-    gpio_spec_t can_tx_io;
-    gpio_spec_t can_rx_io;
-    IRQn_Type irq_no;
-    u32 preempt_priority;
-    u32 sub_priority;
+    u8                              can_number;
+
+    gpio_spec_t                     can_tx_io;
+    gpio_spec_t                     can_rx_io;
+    IRQn_Type                       irq_no;
+    u32                             preempt_priority;
+    u32                             sub_priority;
+
+    u8                              Tx_buf[CAN_BUF_SIZE];
+    u8                              Rx_buf[CAN_BUF_SIZE];
 } can_dev_t;
 
 can_dev_t can_dev_g[] = {
-    [0] = {
+    [CAN_I] = {
+        .can_id = 0x69,
+        .can_template_filter_id = {
+            0x23,
+            0x16,
+            0x69,
+            0x12,
+        },
+
         .instance = {
             .Instance = CAN1,
-            .Init.Prescaler = 5,
+            .Init.Prescaler = 4,
             .Init.Mode = CAN_MODE_NORMAL,
             .Init.SyncJumpWidth = CAN_SJW_1TQ,
-            .Init.TimeSeg1 = CAN_BS1_3TQ,
-            .Init.TimeSeg2 = CAN_BS1_5TQ,
+            .Init.TimeSeg1 = CAN_BS1_4TQ,
+            .Init.TimeSeg2 = CAN_BS2_4TQ,
             .Init.TimeTriggeredMode = DISABLE,
             .Init.AutoBusOff = ENABLE,
             .Init.AutoWakeUp = ENABLE,
             .Init.AutoRetransmission = ENABLE,
             .Init.ReceiveFifoLocked = DISABLE,
             .Init.TransmitFifoPriority = DISABLE,
+        },
+
+        .TxHeader = {
+            .DLC = CAN_BUF_SIZE,
+            .TransmitGlobalTime = DISABLE,
         },
 
         .can_number = 1,
@@ -51,46 +71,174 @@ can_dev_t can_dev_g[] = {
     }
 };
 
+static u32 _SyncJumpWidth_Reg_Data_2_Val(u32 reg_data)
+{
+    u32 val = 0;
+    switch (reg_data) {
+        case CAN_SJW_1TQ:
+            val = 1;
+            break;
+        case CAN_SJW_2TQ:
+            val = 2;
+            break;
+        case CAN_SJW_3TQ:
+            val = 3;
+            break;
+        case CAN_SJW_4TQ:
+            val = 4;
+            break;
+        default:
+            ZSS_ASSERT_WITH_LOG("Invalid SyncJumpWidth reg_data [%d]", reg_data);
+    }
+    return val;
+}
 
+static u32 _TimeSeg1_Reg_Data_2_Val(u32 reg_data)
+{
+    u32 val = 0;
+    switch (reg_data) {
+        case CAN_BS1_1TQ:
+            val = 1;
+            break;
+        case CAN_BS1_2TQ:
+            val = 2;
+            break;
+        case CAN_BS1_3TQ:
+            val = 3;
+            break;
+        case CAN_BS1_4TQ:
+            val = 4;
+            break;
+        case CAN_BS1_5TQ:
+            val = 5;
+            break;
+        case CAN_BS1_6TQ:
+            val = 6;
+            break;
+        case CAN_BS1_7TQ:
+            val = 7;
+            break;
+        case CAN_BS1_8TQ:
+            val = 8;
+            break;
+        case CAN_BS1_9TQ:
+            val = 9;
+            break;
+        case CAN_BS1_10TQ:
+            val = 10;
+            break;
+        case CAN_BS1_11TQ:
+            val = 11;
+            break;
+        case CAN_BS1_12TQ:
+            val = 12;
+            break;
+        case CAN_BS1_13TQ:
+            val = 13;
+            break;
+        case CAN_BS1_14TQ:
+            val = 14;
+            break;
+        case CAN_BS1_15TQ:
+            val = 15;
+            break;
+        case CAN_BS1_16TQ:
+            val = 16;
+            break;
+        default:
+            ZSS_ASSERT_WITH_LOG("Invalid TimeSeg1 reg_data [%d]", reg_data);
+    }
+    return val;
+}
 
+static u32 _TimeSeg2_Reg_Data_2_Val(u32 reg_data)
+{
+    u32 val = 0;
+    switch (reg_data) {
+        case CAN_BS2_1TQ:
+            val = 1;
+            break;
+        case CAN_BS2_2TQ:
+            val = 2;
+            break;
+        case CAN_BS2_3TQ:
+            val = 3;
+            break;
+        case CAN_BS2_4TQ:
+            val = 4;
+            break;
+        case CAN_BS2_5TQ:
+            val = 5;
+            break;
+        case CAN_BS2_6TQ:
+            val = 6;
+            break;
+        case CAN_BS2_7TQ:
+            val = 7;
+            break;
+        case CAN_BS2_8TQ:
+            val = 8;
+            break;
+        default:
+            ZSS_ASSERT_WITH_LOG("Invalid TimeSeg2 reg_data [%d]", reg_data);
+    }
+    return val;
+}
 
+/*
+@baud:  baud = F_clk / (Prescaler * (SyncJumpWidth + TimeSeg1 + TimeSeg2))
+             = 36M / (4 * (1 + 4 + 4))
+             = 1M
 
-CAN_HandleTypeDef hcan;
+        ----------------|----------------------------|----------------------------
+        SyncJumpWidth   |         TimeSeg1           |         TimeSeg2
+                                                     ^
+                                                Sampling point (is between TimeSeg1 and TimeSeg2, so TimeSeg1 should be slightly shorter than TimeSeg2 and they should NOT be too short)
+ */
+static float _CAN_Calc_Baud_MHz(can_index_e index)
+{
+    u32 clk_source_MHz, SyncJumpWidth, TimeSeg1, TimeSeg2 = 0;
 
-u8 Can_RxData[8];
-u8 Can_TxData[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-u32 pTxMailbox = 0;
-CAN_RxHeaderTypeDef CanRx;
-CAN_TxHeaderTypeDef CanTx;
+    switch (can_dev_g[index].can_number) {
+    case 1:
+        clk_source_MHz = Stm32_Get_PCLK_1_MHz();
+        break;
+    case 2:
+        clk_source_MHz = Stm32_Get_PCLK_1_MHz();
+        break;
+    default:
+        ZSS_ASSERT_WITH_LOG("Invalid SyncJumpWidth can_number [%d]", can_dev_g[index].can_number);
+    }
 
+    SyncJumpWidth = _SyncJumpWidth_Reg_Data_2_Val(can_dev_g[index].instance.Init.SyncJumpWidth);
+    TimeSeg1 = _TimeSeg1_Reg_Data_2_Val(can_dev_g[index].instance.Init.TimeSeg1);
+    TimeSeg2 = _TimeSeg2_Reg_Data_2_Val(can_dev_g[index].instance.Init.TimeSeg2);
+    ZSS_CAN_LOGI("CAN[%d] clk_source[%d]MHz, SyncJumpWidth[%d], TimeSeg1[%d], TimeSeg2[%d].\r\n", index, clk_source_MHz, SyncJumpWidth, TimeSeg1, TimeSeg2);
 
-void MX_CAN_Init(void)
+    return ((float)clk_source_MHz / (float)(can_dev_g[index].instance.Init.Prescaler * (SyncJumpWidth + TimeSeg1 + TimeSeg2)));
+}
+
+void CAN_Init_Drv(void)
 {
     int rlt = HAL_OK;
 
-    hcan.Instance = CAN1;
-    hcan.Init.Prescaler = 5;
-    hcan.Init.Mode = CAN_MODE_NORMAL;
-    hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-    hcan.Init.TimeSeg1 = CAN_BS1_3TQ;
-    hcan.Init.TimeSeg2 = CAN_BS1_5TQ;
-    hcan.Init.TimeTriggeredMode = DISABLE;
-    hcan.Init.AutoBusOff = ENABLE;
-    hcan.Init.AutoWakeUp = ENABLE;
-    hcan.Init.AutoRetransmission = ENABLE;
-    hcan.Init.ReceiveFifoLocked = DISABLE;
-    hcan.Init.TransmitFifoPriority = DISABLE;
+    for (int i = 0; i < ZSS_ARRAY_SIZE(can_dev_g); i++) {
+        rlt = HAL_CAN_Init(&(can_dev_g[i].instance));
+        if (HAL_OK != rlt) {
+            ZSS_ASSERT_WITH_LOG("HAL_CAN_Init failed [%d].\r\n", rlt);
+        }
+        can_dev_g[i].baud = _CAN_Calc_Baud_MHz((can_index_e)i);
 
-    rlt = HAL_CAN_Init(&hcan);
-    if (HAL_OK != rlt) {
-        ZSS_ASSERT_WITH_LOG("CAN initialization failed.\r\n");
+        ZSS_CAN_LOGI("CAN[%d], ID[%x] is initialized at baud [%f]MHz.\r\n", i, can_dev_g[i].can_id, can_dev_g[i].baud);
     }
+
+    ZSS_CAN_LOGI("CAN_Init_Drv successful.\r\n");
 }
 
 void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle)
 {
     __HAL_RCC_AFIO_CLK_ENABLE();
-    for (u32 i = 0; i < ZSS_ARRAY_SIZE(can_dev_g); i++) {
+    for (u8 i = 0; i < ZSS_ARRAY_SIZE(can_dev_g); i++) {
         if (canHandle->Instance == can_dev_g[i].instance.Instance) {
             switch (can_dev_g[i].can_number) {
             case 1:
@@ -122,61 +270,154 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle)
     }
 }
 
-
-
-
-
-HAL_StatusTypeDef Can_Config(void)
+void CAN_Config_Tx_Drv(can_index_e index, can_frame_type_e frame_type, can_ID_type_e ID_type)
 {
+    can_dev_g[index].TxHeader.RTR = frame_type;
 
-    CanTx.DLC = 8;
-    CanTx.ExtId = CAN_ID;
-    CanTx.IDE = CAN_ID_EXT;
-    CanTx.RTR = CAN_RTR_DATA;
-    CanTx.StdId = 0x00;
-    CanTx.TransmitGlobalTime = DISABLE;
-
-
-    CAN_FilterTypeDef sFilterConfig;
-
-    sFilterConfig.FilterActivation = CAN_FILTER_ENABLE;                                            //筛选器使能
-    sFilterConfig.FilterBank = 0;                                                                  //筛选器0
-    sFilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;                                         //指定将分配给过滤器的FIFO(0或1U)。
-    sFilterConfig.FilterIdHigh = (((CAN_FILTER_ID << 3) | CAN_ID_EXT | CAN_RTR_DATA) & 0xFFFF0000) >> 16; // ID的高16位
-    sFilterConfig.FilterIdLow = ((CAN_FILTER_ID << 3) | CAN_ID_EXT | CAN_RTR_DATA) & 0xFFFF;              // ID的低16位，只接收扩展帧模式、数据帧
-    sFilterConfig.FilterMaskIdHigh = 0xFFFF;                                                       // FilterMask高低字节数据中位为1时代表必须与ID该位一致，0xFFFFFFFF代表接收筛选必须与ID一致才通过
-    sFilterConfig.FilterMaskIdLow = 0xFFFF;
-    sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-    sFilterConfig.SlaveStartFilterBank = 0;
-
-    if (HAL_CAN_ConfigFilter(&hcan, &sFilterConfig) != HAL_OK) {
-        return HAL_ERROR;
+    if (CAN_STID == ID_type) {
+        can_dev_g[index].TxHeader.StdId = can_dev_g[index].can_id;
+    } else if (CAN_EXID == ID_type) {
+        can_dev_g[index].TxHeader.ExtId = can_dev_g[index].can_id;
+    } else {
+        ZSS_ASSERT_WITH_LOG("Invalid ID_type [%d]", ID_type);
     }
-
-    if (HAL_CAN_Start(&hcan) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-    if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
-        return HAL_ERROR;
-    }
-
-
-
-    ZSS_CAN_LOGI("CAN Config successful.\r\n");
-    return HAL_OK;
 }
 
-void USB_LP_CAN1_RX0_IRQHandler(void)
+/*
+    @Filter mode specification
+        I:      16 BIT LIST MODE
+            * FilterIdHigh, FilterIdLow, FilterMaskIdHigh, FilterMaskIdLow each contains one whitelist ID as follows.
+                -----------------------------------------------------------------
+                |             [15:8]            |             [7:0]             |
+                -----------------------------------------------------------------
+                             STID[10:3]         |  STID[2:0]+RTR+IDE+EXID[17:15]
+
+
+        II:     16 BIT MASK MODE
+            * FilterIdHigh, FilterIdLow each contains one whitelist ID as follows.
+                -----------------------------------------------------------------
+                |             [15:8]            |             [7:0]             |
+                -----------------------------------------------------------------
+                             STID[10:3]         |  STID[2:0]+RTR+IDE+EXID[17:15]
+        
+            * FilterMaskIdHigh, FilterMaskIdLow each contains one 16-bit MASK, bit set indicates ‘must match with the ID’, bit unset indicates 'don't care', e.g:
+                -----------------------------------------------------------------
+                | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
+                -----------------------------------------------------------------
+                                    STID                    |
+                means the remote STID passes the filter only if bit[0] and bit[6] matches with FilterMaskIdHigh or FilterMaskIdLow.
+                NOTE: The 16 BIT MASK MODE can also filter undesired IDE value (by setting/unsetting bit[3]) or RTR value (by setting/unsetting bit[4]) of FilterMaskIdHigh / FilterMaskIdLow
+
+
+        III:    32 BIT LIST MODE
+            * (FilterIdHigh + FilterIdLow), (FilterMaskIdHigh + FilterMaskIdLow) each contains one whitelist ID as follows.
+                ----------------------------------------------------------------------------------------------------------------------------------
+                |             [31:24]            |            [23:16]            |             [15:8]            |             [7:0]             |
+                ----------------------------------------------------------------------------------------------------------------------------------
+                             STID[10:3]          |    STID[2:0]+EXID[17:13]      |           EXID[12:5]          |       EXID[4:0]+IDE+RTR+0
+                                                                    FilterIdHigh + FilterIdLow
+                                                                FilterMaskIdHigh + FilterMaskIdLow
+
+
+        IV:     32 BIT MASK MODE
+            * (FilterIdHigh + FilterIdLow) contains one whitelist ID as follows.
+                ----------------------------------------------------------------------------------------------------------------------------------
+                |             [31:24]            |            [23:16]            |             [15:8]            |             [7:0]             |
+                ----------------------------------------------------------------------------------------------------------------------------------
+                             STID[10:3]          |    STID[2:0]+EXID[17:13]      |           EXID[12:5]          |       EXID[4:0]+IDE+RTR+0
+                                                                    FilterIdHigh + FilterIdLow
+
+            * (FilterMaskIdHigh + FilterMaskIdLow) contains one 32-bit MASK, bit set indicates ‘must match with the ID’, bit unset indicates 'don't care', e.g:
+                ---------------------------------------------------------------------------------------------------------------------------------
+                | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+                ---------------------------------------------------------------------------------------------------------------------------------
+                                    STID                    |                                  EXID                                 |
+                means the remote STID passes the filter only if bit[0] and bit[6] matches with (FilterIdHigh + FilterIdLow)
+                NOTE: The 32 BIT MASK MODE can also filter undesired IDE value (by setting/unsetting bit[3]) or RTR value (by setting/unsetting bit[2]) of (FilterMaskIdHigh + FilterMaskIdLow)
+ */
+CAN_FilterTypeDef CAN_filter_conf_template = {
+    .FilterActivation = CAN_FILTER_ENABLE,
+    .FilterMode = CAN_FILTERMODE_IDMASK,
+    .FilterScale = CAN_FILTERSCALE_16BIT,
+    .FilterBank = 0,
+    .SlaveStartFilterBank = 0,
+    .FilterFIFOAssignment = CAN_FILTER_FIFO0,
+    .FilterIdHigh = 0,
+    .FilterIdLow = 0,
+    .FilterMaskIdHigh = 0,
+    .FilterMaskIdLow = 0,
+};
+
+HAL_StatusTypeDef CAN_Config_Rx_Drv(can_index_e index, CAN_FilterTypeDef CAN_filter_conf)
 {
-  HAL_CAN_IRQHandler(&hcan);
+    HAL_StatusTypeDef rlt = HAL_OK;
+
+    if (!memcmp(&CAN_filter_conf, &CAN_filter_conf_template, sizeof(CAN_FilterTypeDef))) {
+        CAN_filter_conf.FilterIdHigh = can_dev_g[index].can_template_filter_id[0] << 5;
+        CAN_filter_conf.FilterIdLow = can_dev_g[index].can_template_filter_id[1] << 5;
+        CAN_filter_conf.FilterMaskIdHigh = can_dev_g[index].can_template_filter_id[2] << 5;
+        CAN_filter_conf.FilterMaskIdLow = can_dev_g[index].can_template_filter_id[3] << 5;
+    }
+
+    rlt = HAL_CAN_ConfigFilter(&(can_dev_g[index].instance), &CAN_filter_conf);
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("HAL_CAN_ConfigFilter failed [%d].\r\n", rlt);
+    }
+
+    rlt = HAL_CAN_Start(&(can_dev_g[index].instance));
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("HAL_CAN_ConfigFilter failed [%d].\r\n", rlt);
+    }
+
+    rlt = HAL_CAN_ActivateNotification(&(can_dev_g[index].instance), CAN_IT_RX_FIFO0_MSG_PENDING);
+    if (HAL_OK != rlt) {
+        ZSS_ASSERT_WITH_LOG("HAL_CAN_ConfigFilter failed [%d].\r\n", rlt);
+    }
+
+    ZSS_CAN_LOGI("CAN Config successful.\r\n");
+    return rlt;
+}
+
+HAL_StatusTypeDef CAN_Send(can_index_e index, u8 *tx_data)
+{
+    HAL_StatusTypeDef rlt = HAL_OK;
+
+    rlt = HAL_CAN_AddTxMessage(&(can_dev_g[index].instance), &(can_dev_g[index].TxHeader), tx_data, &(can_dev_g[index].pTxMailbox));
+    if (HAL_OK != rlt) {
+        ZSS_CAN_LOGE("HAL_CAN_AddTxMessage failed [%d]\r\n", rlt);
+    }
+
+    ZSS_CAN_LOGI("CAN Sending: %d %d %d %d %d %d %d %d\r\n",
+                 tx_data[0],
+                 tx_data[1],
+                 tx_data[2],
+                 tx_data[3],
+                 tx_data[4],
+                 tx_data[5],
+                 tx_data[6],
+                 tx_data[7]);
+
+    return rlt;
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    if (HAL_CAN_GetRxMessage(hcan, CAN_FILTER_FIFO0, &CanRx, Can_RxData) == HAL_OK) {
-        ZSS_CAN_LOGI("Can_RxData[0]:[%4d]    RX_ID[%x]      I am [%x]\r\n", Can_RxData[0], CanRx.ExtId, CAN_ID);
+    HAL_StatusTypeDef rlt = HAL_OK;
+
+    for (u8 i = 0; i < ZSS_ARRAY_SIZE(can_dev_g); i++) {
+        if (hcan->Instance == can_dev_g[i].instance.Instance) {
+            rlt = HAL_CAN_GetRxMessage(&(can_dev_g[i].instance), CAN_FILTER_FIFO0, &(can_dev_g[i].RxHeader), can_dev_g[i].Rx_buf);
+            if (HAL_OK != rlt) {
+                ZSS_CAN_LOGE("HAL_CAN_GetRxMessage failed [%d]\r\n", rlt);
+            }
+            printf("Rx_buf[%d]:[%4d]    Remote_ID[%x]      Local_ID[%x]\r\n", i, can_dev_g[i].Rx_buf[i], can_dev_g[i].RxHeader.StdId, can_dev_g[i].can_id);
+        }
     }
 }
 
+/* --------------------------------------------------------------- CAN Interrupt callbacks --------------------------------------------------------------- */
+
+void USB_LP_CAN1_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&(can_dev_g[CAN_I].instance));
+}
