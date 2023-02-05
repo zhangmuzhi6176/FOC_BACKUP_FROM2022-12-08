@@ -50,7 +50,7 @@ typedef enum can_filter_size {
 } can_filter_size_e;
 
 void CAN_Init_Drv(void);
-void CAN_Config_Tx_Drv(can_index_e index, can_frame_type_e frame_type, can_ID_type_e ID_type);
+void CAN_Config_Tx_Data_Drv(can_index_e index, can_ID_type_e ID_type, u32 id, u8 data_len);
 HAL_StatusTypeDef CAN_Config_Rx_Drv(can_index_e index, CAN_FilterTypeDef CAN_filter_conf);
 HAL_StatusTypeDef CAN_Send(can_index_e index, u8 *tx_data);
 

@@ -1,10 +1,10 @@
-#include "zmz_uart_hal.h"
-
 #include "zmz_can_drv_STM32F103.h"
 #include "zmz_gpio_drv_STM32F103.h"
 
+#include "zmz_proxy.h"
+#include "zmz_uart_hal.h"
+
 typedef struct can_dev {
-    u32                             can_id;
     u32                             can_template_filter_id[CAN_TEMPLATE_FILTER_NUM];
     float                           baud;
 
@@ -21,18 +21,16 @@ typedef struct can_dev {
     u32                             preempt_priority;
     u32                             sub_priority;
 
-    u8                              Tx_buf[CAN_BUF_SIZE];
     u8                              Rx_buf[CAN_BUF_SIZE];
 } can_dev_t;
 
-can_dev_t can_dev_g[] = {
+static can_dev_t can_dev_g[] = {
     [CAN_I] = {
-        .can_id = 0x69,
         .can_template_filter_id = {
-            0x23,
-            0x16,
-            0x69,
-            0x12,
+            0x1,
+            0x0,
+            0x0,
+            0x0,
         },
 
         .instance = {
@@ -51,7 +49,6 @@ can_dev_t can_dev_g[] = {
         },
 
         .TxHeader = {
-            .DLC = CAN_BUF_SIZE,
             .TransmitGlobalTime = DISABLE,
         },
 
@@ -75,20 +72,20 @@ static u32 _SyncJumpWidth_Reg_Data_2_Val(u32 reg_data)
 {
     u32 val = 0;
     switch (reg_data) {
-        case CAN_SJW_1TQ:
-            val = 1;
-            break;
-        case CAN_SJW_2TQ:
-            val = 2;
-            break;
-        case CAN_SJW_3TQ:
-            val = 3;
-            break;
-        case CAN_SJW_4TQ:
-            val = 4;
-            break;
-        default:
-            ZSS_ASSERT_WITH_LOG("Invalid SyncJumpWidth reg_data [%d]", reg_data);
+    case CAN_SJW_1TQ:
+        val = 1;
+        break;
+    case CAN_SJW_2TQ:
+        val = 2;
+        break;
+    case CAN_SJW_3TQ:
+        val = 3;
+        break;
+    case CAN_SJW_4TQ:
+        val = 4;
+        break;
+    default:
+        ZSS_ASSERT_WITH_LOG("Invalid SyncJumpWidth reg_data [%d]", reg_data);
     }
     return val;
 }
@@ -97,56 +94,56 @@ static u32 _TimeSeg1_Reg_Data_2_Val(u32 reg_data)
 {
     u32 val = 0;
     switch (reg_data) {
-        case CAN_BS1_1TQ:
-            val = 1;
-            break;
-        case CAN_BS1_2TQ:
-            val = 2;
-            break;
-        case CAN_BS1_3TQ:
-            val = 3;
-            break;
-        case CAN_BS1_4TQ:
-            val = 4;
-            break;
-        case CAN_BS1_5TQ:
-            val = 5;
-            break;
-        case CAN_BS1_6TQ:
-            val = 6;
-            break;
-        case CAN_BS1_7TQ:
-            val = 7;
-            break;
-        case CAN_BS1_8TQ:
-            val = 8;
-            break;
-        case CAN_BS1_9TQ:
-            val = 9;
-            break;
-        case CAN_BS1_10TQ:
-            val = 10;
-            break;
-        case CAN_BS1_11TQ:
-            val = 11;
-            break;
-        case CAN_BS1_12TQ:
-            val = 12;
-            break;
-        case CAN_BS1_13TQ:
-            val = 13;
-            break;
-        case CAN_BS1_14TQ:
-            val = 14;
-            break;
-        case CAN_BS1_15TQ:
-            val = 15;
-            break;
-        case CAN_BS1_16TQ:
-            val = 16;
-            break;
-        default:
-            ZSS_ASSERT_WITH_LOG("Invalid TimeSeg1 reg_data [%d]", reg_data);
+    case CAN_BS1_1TQ:
+        val = 1;
+        break;
+    case CAN_BS1_2TQ:
+        val = 2;
+        break;
+    case CAN_BS1_3TQ:
+        val = 3;
+        break;
+    case CAN_BS1_4TQ:
+        val = 4;
+        break;
+    case CAN_BS1_5TQ:
+        val = 5;
+        break;
+    case CAN_BS1_6TQ:
+        val = 6;
+        break;
+    case CAN_BS1_7TQ:
+        val = 7;
+        break;
+    case CAN_BS1_8TQ:
+        val = 8;
+        break;
+    case CAN_BS1_9TQ:
+        val = 9;
+        break;
+    case CAN_BS1_10TQ:
+        val = 10;
+        break;
+    case CAN_BS1_11TQ:
+        val = 11;
+        break;
+    case CAN_BS1_12TQ:
+        val = 12;
+        break;
+    case CAN_BS1_13TQ:
+        val = 13;
+        break;
+    case CAN_BS1_14TQ:
+        val = 14;
+        break;
+    case CAN_BS1_15TQ:
+        val = 15;
+        break;
+    case CAN_BS1_16TQ:
+        val = 16;
+        break;
+    default:
+        ZSS_ASSERT_WITH_LOG("Invalid TimeSeg1 reg_data [%d]", reg_data);
     }
     return val;
 }
@@ -155,32 +152,32 @@ static u32 _TimeSeg2_Reg_Data_2_Val(u32 reg_data)
 {
     u32 val = 0;
     switch (reg_data) {
-        case CAN_BS2_1TQ:
-            val = 1;
-            break;
-        case CAN_BS2_2TQ:
-            val = 2;
-            break;
-        case CAN_BS2_3TQ:
-            val = 3;
-            break;
-        case CAN_BS2_4TQ:
-            val = 4;
-            break;
-        case CAN_BS2_5TQ:
-            val = 5;
-            break;
-        case CAN_BS2_6TQ:
-            val = 6;
-            break;
-        case CAN_BS2_7TQ:
-            val = 7;
-            break;
-        case CAN_BS2_8TQ:
-            val = 8;
-            break;
-        default:
-            ZSS_ASSERT_WITH_LOG("Invalid TimeSeg2 reg_data [%d]", reg_data);
+    case CAN_BS2_1TQ:
+        val = 1;
+        break;
+    case CAN_BS2_2TQ:
+        val = 2;
+        break;
+    case CAN_BS2_3TQ:
+        val = 3;
+        break;
+    case CAN_BS2_4TQ:
+        val = 4;
+        break;
+    case CAN_BS2_5TQ:
+        val = 5;
+        break;
+    case CAN_BS2_6TQ:
+        val = 6;
+        break;
+    case CAN_BS2_7TQ:
+        val = 7;
+        break;
+    case CAN_BS2_8TQ:
+        val = 8;
+        break;
+    default:
+        ZSS_ASSERT_WITH_LOG("Invalid TimeSeg2 reg_data [%d]", reg_data);
     }
     return val;
 }
@@ -229,7 +226,7 @@ void CAN_Init_Drv(void)
         }
         can_dev_g[i].baud = _CAN_Calc_Baud_MHz((can_index_e)i);
 
-        ZSS_CAN_LOGI("CAN[%d], ID[%x] is initialized at baud [%f]MHz.\r\n", i, can_dev_g[i].can_id, can_dev_g[i].baud);
+        ZSS_CAN_LOGI("CAN[%d] is initialized at baud [%f]MHz.\r\n", i, can_dev_g[i].baud);
     }
 
     ZSS_CAN_LOGI("CAN_Init_Drv successful.\r\n");
@@ -270,17 +267,41 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle)
     }
 }
 
-void CAN_Config_Tx_Drv(can_index_e index, can_frame_type_e frame_type, can_ID_type_e ID_type)
+void CAN_Config_Tx_Data_Drv(can_index_e index, can_ID_type_e ID_type, u32 id, u8 data_len)
 {
-    can_dev_g[index].TxHeader.RTR = frame_type;
+    can_dev_g[index].TxHeader.RTR = CAN_DATA;
+    can_dev_g[index].TxHeader.DLC = data_len;
 
     if (CAN_STID == ID_type) {
-        can_dev_g[index].TxHeader.StdId = can_dev_g[index].can_id;
+        can_dev_g[index].TxHeader.StdId = id;
     } else if (CAN_EXID == ID_type) {
-        can_dev_g[index].TxHeader.ExtId = can_dev_g[index].can_id;
+        can_dev_g[index].TxHeader.ExtId = id;
     } else {
         ZSS_ASSERT_WITH_LOG("Invalid ID_type [%d]", ID_type);
     }
+
+}
+
+HAL_StatusTypeDef CAN_Send(can_index_e index, u8 *tx_data)
+{
+    HAL_StatusTypeDef rlt = HAL_OK;
+
+    rlt = HAL_CAN_AddTxMessage(&(can_dev_g[index].instance), &(can_dev_g[index].TxHeader), tx_data, &(can_dev_g[index].pTxMailbox));
+    if (HAL_OK != rlt) {
+        ZSS_CAN_LOGE("HAL_CAN_AddTxMessage failed [%d]\r\n", rlt);
+    }
+
+    ZSS_CAN_LOGI("CAN[%d], STID[0x%x] EXID[0x%x] Sending: %d %d %d %d %d %d %d %d\r\n", index, can_dev_g[index].TxHeader.StdId, can_dev_g[index].TxHeader.ExtId, 
+                 tx_data[0],
+                 tx_data[1],
+                 tx_data[2],
+                 tx_data[3],
+                 tx_data[4],
+                 tx_data[5],
+                 tx_data[6],
+                 tx_data[7]);
+
+    return rlt;
 }
 
 /*
@@ -299,7 +320,7 @@ void CAN_Config_Tx_Drv(can_index_e index, can_frame_type_e frame_type, can_ID_ty
                 |             [15:8]            |             [7:0]             |
                 -----------------------------------------------------------------
                              STID[10:3]         |  STID[2:0]+RTR+IDE+EXID[17:15]
-        
+
             * FilterMaskIdHigh, FilterMaskIdLow each contains one 16-bit MASK, bit set indicates ‘must match with the ID’, bit unset indicates 'don't care', e.g:
                 -----------------------------------------------------------------
                 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -337,7 +358,7 @@ void CAN_Config_Tx_Drv(can_index_e index, can_frame_type_e frame_type, can_ID_ty
  */
 CAN_FilterTypeDef CAN_filter_conf_template = {
     .FilterActivation = CAN_FILTER_ENABLE,
-    .FilterMode = CAN_FILTERMODE_IDMASK,
+    .FilterMode = CAN_FILTERMODE_IDLIST,
     .FilterScale = CAN_FILTERSCALE_16BIT,
     .FilterBank = 0,
     .SlaveStartFilterBank = 0,
@@ -378,31 +399,10 @@ HAL_StatusTypeDef CAN_Config_Rx_Drv(can_index_e index, CAN_FilterTypeDef CAN_fil
     return rlt;
 }
 
-HAL_StatusTypeDef CAN_Send(can_index_e index, u8 *tx_data)
-{
-    HAL_StatusTypeDef rlt = HAL_OK;
-
-    rlt = HAL_CAN_AddTxMessage(&(can_dev_g[index].instance), &(can_dev_g[index].TxHeader), tx_data, &(can_dev_g[index].pTxMailbox));
-    if (HAL_OK != rlt) {
-        ZSS_CAN_LOGE("HAL_CAN_AddTxMessage failed [%d]\r\n", rlt);
-    }
-
-    ZSS_CAN_LOGI("CAN Sending: %d %d %d %d %d %d %d %d\r\n",
-                 tx_data[0],
-                 tx_data[1],
-                 tx_data[2],
-                 tx_data[3],
-                 tx_data[4],
-                 tx_data[5],
-                 tx_data[6],
-                 tx_data[7]);
-
-    return rlt;
-}
-
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     HAL_StatusTypeDef rlt = HAL_OK;
+    proxy_dev_t *proxy_dev = NULL;
 
     for (u8 i = 0; i < ZSS_ARRAY_SIZE(can_dev_g); i++) {
         if (hcan->Instance == can_dev_g[i].instance.Instance) {
@@ -410,10 +410,15 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
             if (HAL_OK != rlt) {
                 ZSS_CAN_LOGE("HAL_CAN_GetRxMessage failed [%d]\r\n", rlt);
             }
-            printf("Rx_buf[%d]:[%4d]    Remote_ID[%x]      Local_ID[%x]\r\n", i, can_dev_g[i].Rx_buf[i], can_dev_g[i].RxHeader.StdId, can_dev_g[i].can_id);
+
+            proxy_dev = Get_Proxy_By_CAN_idx((can_index_e)i);
+            if (proxy_dev) {
+                proxy_dev->Proxy_Response_Func(can_dev_g[i].RxHeader.StdId, can_dev_g[i].Rx_buf);
+            }
         }
     }
 }
+
 
 /* --------------------------------------------------------------- CAN Interrupt callbacks --------------------------------------------------------------- */
 

@@ -1,11 +1,11 @@
 #ifndef _ZMZ_SYSTEM_H
 #define _ZMZ_SYSTEM_H
 
-typedef enum RET_VAL {
+typedef enum zss_return {
     SUCCESS_ZMZ = 0,
     COMMON_ERROR_ZMZ = -1001,
     TIME_OUT_ZMZ = -1002,
-} RET_VAL_e;
+} zss_return_e;
 
 typedef int s32;
 typedef short s16;

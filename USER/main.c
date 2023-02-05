@@ -1,3 +1,4 @@
+#include "zmz_proxy.h"
 #include "zmz_led.h"
 #include "zmz_foc.h"
 #include "zmz_mt6701.h"
@@ -218,7 +219,6 @@ int main(void)
     IIC_Init_Hal();
     ADC_Init_Drv();
     CAN_Init_Drv();
-    CAN_Config_Tx_Drv(CAN_I, CAN_DATA, CAN_STID);
     CAN_Config_Rx_Drv(CAN_I, CAN_filter_conf_template);
     /* FOC_Init(); */
     delay_ms(500);
@@ -234,25 +234,18 @@ int main(void)
                 (TaskHandle_t *)&StartTask_Handler); //任务句柄
     /* vTaskStartScheduler(); */
 
-    int ret = 0;
-    u8 CAN_TxData[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-
-    CAN_filter_conf_template.FilterIdHigh = 0;
+    foc_ctrl_t foc_pos;
     while (1) {
-        ret = ret;
-        CAN_TxData[0] = CAN_TxData[0];
+        foc_pos.mech_angle = foc_pos.mech_angle;
+
+        /* foc_pos.mech_angle = MT_Get_ANGLE(ENC_NO_2);
+        Zss_Proxy_Send_Retry(PROXY_CAN, ZSS_CMD_FOC_CTRL, &foc_pos, 5);
+
+        delay_ms(10); */
 
 
-        /* ret = CAN_Send(CAN_I, CAN_TxData);
-        if (HAL_OK != ret) {
-            ZSS_MAIN_LOGI("can tx failed [%d]\r\n", ret);
-        }
 
-        CAN_TxData[0]++;
-        
-        delay_ms(100);
-
-        printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2)); */
+        //printf("%-*.3f\r\n", 8, MT_Get_ANGLE(ENC_NO_2));
 
 
 

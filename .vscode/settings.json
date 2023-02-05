@@ -33,6 +33,8 @@
         "zmz_led.h": "c",
         "foc_5225_conf.h": "c",
         "foc_6025_conf.h": "c",
-        "zmz_delay.h": "c"
+        "zmz_delay.h": "c",
+        "zmz_cmd_define": "c",
+        "zmz_proxy.h": "c"
     }
 }
